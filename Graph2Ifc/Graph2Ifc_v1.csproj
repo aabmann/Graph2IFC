@@ -8,6 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="_Archiv\SPARQLQueries.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="_Archiv\SPARQLQueries.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="dotNetRDF" Version="2.7.2" />
     <PackageReference Include="Xbim.Essentials" Version="5.1.329" />
   </ItemGroup>

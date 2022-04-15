@@ -29,7 +29,7 @@ namespace Graph2Ifc.XBimIFC
 {
     class BuildingElements
     {
-        public const string fileName = "../../../ausgabe_verwinkeltesHaus.ifc";
+        public static string fileName = null;
         public static IFormatProvider provider = CultureInfo.InvariantCulture;
 
         public static Dictionary<string, IfcBuildingElement> buildingelementslist = new Dictionary<string, IfcBuildingElement>();

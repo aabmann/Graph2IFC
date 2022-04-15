@@ -35,9 +35,11 @@ namespace Graph2Ifc
             await File.WriteAllLinesAsync("../../Ifc4Entities.txt", subtypesPersistEntity);
         }
 
-        public static void Graph2IfcMain()
+        public static void Graph2IfcMain(Uri repository, string output)
         {
             //exportenities();
+
+            Queriebuilder.endpoint = repository;
 
             Queriebuilder.SetNamespaces();
 
@@ -63,6 +65,8 @@ namespace Graph2Ifc
 
             if (ifcversion.Contains("IFC4"))
             {
+                BuildingElements.fileName = output;
+
                 SparqlQuery SQdefinitionselect = Queriebuilder.queriemaingraph("IfcDefinitionSelect");
                 SparqlResultSet SRSdefinitionselect = Queriebuilder.abfrage(SQdefinitionselect);
                 Dictionary<string, Dictionary<string, List<dynamic>>> resultsdefinitionselect = sortresults(SRSdefinitionselect);
@@ -145,6 +149,8 @@ namespace Graph2Ifc
 
             else if (ifcversion.Contains("IFC2X3"))
             {
+
+                BuildingElements_Ifc2x3.fileName = output;
 
                 SparqlQuery SQroot = Queriebuilder.queriemaingraph("IfcRoot");
                 SparqlResultSet SRSroot = Queriebuilder.abfrage(SQroot);

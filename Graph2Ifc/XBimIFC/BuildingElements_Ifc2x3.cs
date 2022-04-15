@@ -29,7 +29,7 @@ namespace Graph2Ifc.XBimIFC
 {
     class BuildingElements_Ifc2x3
     {
-        public const string fileName = "../../../ausgabe_MS_5.ifc";
+        public static string fileName { get; set; }
         public static IFormatProvider provider = CultureInfo.InvariantCulture;
 
         public static Dictionary<string, IfcBuildingElement> buildingelementslist = new Dictionary<string, IfcBuildingElement>();

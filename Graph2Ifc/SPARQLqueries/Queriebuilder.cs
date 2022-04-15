@@ -16,24 +16,19 @@ namespace Graph2Ifc.SPARQLqueries
 {
     class Queriebuilder
     {
+        public static Uri endpoint { get; set; }
+      
+
 
         public static IGraph temp = new VDS.RDF.Graph();
 
         private static readonly HttpClient client = new HttpClient();
 
-        //public static string repoid = "AC20-FZK-Haus";
-        //public static string repoid = "BG_4";
-        //public static string repoid = "verwinkeltesHaus";
-        public static string repoid = "MS_5";
 
-        public static Uri endpoint = new Uri("http://localhost:7200/repositories/" + repoid);
-        public static SparqlRemoteEndpoint SRE = new SparqlRemoteEndpoint(endpoint);
         //public static SparqlRemoteEndpoint SRE = new SparqlRemoteEndpoint(new Uri("http://localhost:7200/repositories/BG_4"));
 
         public static List<ITriplePattern> patternlist = new List<ITriplePattern>();
         
-        public static ISparqlAlgebra sparqlpattern;
-
         public static VariablePattern element = new VariablePattern("element");
 
         public static NamespaceMapper NM = new NamespaceMapper();
@@ -443,6 +438,8 @@ namespace Graph2Ifc.SPARQLqueries
 
         public static SparqlResultSet abfrage(SparqlQuery SQ)
         {
+            SparqlRemoteEndpoint SRE = new SparqlRemoteEndpoint(endpoint);
+            
             SRE.ResultsAcceptHeader = "application/sparql-results+json";
             SparqlResultSet SRS = SRE.QueryWithResultSet(SQ.ToString());
             return SRS;
