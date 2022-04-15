@@ -1,0 +1,1157 @@
+﻿using System;
+using System.Dynamic;
+using System.Collections.Generic;
+using System.Globalization;
+using VDS.RDF.Query;
+using Xbim.Ifc;
+using Xbim.Ifc4.ProductExtension;
+using Xbim.Ifc4.Kernel;
+using Xbim.Ifc4.SharedBldgElements;
+using Xbim.Common.Step21;
+using Xbim.IO;
+using Xbim.Common;
+using Xbim.Ifc4.PropertyResource;
+using Xbim.Ifc4.MeasureResource;
+using Xbim.Ifc4.GeometricConstraintResource;
+using Xbim.Ifc4.GeometryResource;
+using Xbim.Ifc4.Interfaces;
+using Xbim.Ifc4.UtilityResource;
+using System.Linq;
+using Xbim.Ifc4.RepresentationResource;
+using System.Reflection;
+using Xbim.Ifc4.PresentationDefinitionResource;
+using Graph2Ifc.SPARQLqueries;
+using Xbim.Ifc4.QuantityResource;
+using Xbim.Ifc4.TopologyResource;
+using VDS.RDF;
+
+namespace Graph2Ifc.XBimIFC
+{
+    class BuildingElements
+    {
+        public const string fileName = "../../../BasicWall.ifc";
+        public static IFormatProvider provider = CultureInfo.InvariantCulture;
+
+        public static Dictionary<string, IfcBuildingElement> buildingelementslist = new Dictionary<string, IfcBuildingElement>();
+        public static Dictionary<string, dynamic> persistentitylist = new Dictionary<string, dynamic>();
+
+
+        //public static IfcStore model;
+
+        public static IfcStore GenerateIfcFile(SparqlResultSet SRS)
+        {
+
+            List<SparqlResult> SRSList01 = SRS.Results;
+
+
+            string AI = "$"; //ApplicationIdentifier
+            string AFN = "$"; //ApplicationFullName
+            string ADN = "$"; //ApplicationDevelopersName
+            string AV = "$"; //ApplicationVersion
+            string EFN = "$"; //EditorsFamilyName
+            string EON = "$"; //EditorsOrganisationName
+            string EGN = ""; //EditorsGivenName
+
+            foreach (SparqlResult SingleResult in SRSList01)
+            {
+                Console.WriteLine(SingleResult.Count);//
+                var variables = SingleResult.Variables; //
+                int i = 0;
+                string ifc = "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#";
+                while (i < (SingleResult.Count - 1)) // -1 für "Value"
+                {
+                    Console.WriteLine(SingleResult[i]);
+                    if (SingleResult[i].ToString() == ifc + "applicationIdentifier_IfcApplication") //.Split("#")[1]
+                    {
+                        AI = SingleResult["Value"].ToString();
+                    }
+                    else if (SingleResult[i].ToString() == "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#applicationFullName_IfcApplication ")
+                    {
+                        AFN = SingleResult["Value"].ToString();
+                    }
+                    else if (SingleResult[i].ToString() == "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#applicationDeveloper_IfcApplication")
+                    {
+                        ADN = SingleResult["Value"].ToString();
+                    }
+                    else if (SingleResult[i].ToString() == "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#version_IfcApplication")
+                    {
+                        AV = SingleResult["Value"].ToString();
+                    }
+                    else if (SingleResult[i].ToString() == "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#givenname_IfcPerson")
+                    {
+                        EGN = SingleResult["Value"].ToString();
+                    }
+                    else if (SingleResult[i].ToString() == "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#familyName_IfcPerson")
+                    {
+                        EFN = SingleResult["Value"].ToString();
+                    }
+                    else if (SingleResult[i].ToString() == "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#name_IfcOrganization")
+                    {
+                        EON = SingleResult["Value"].ToString();
+                    }
+                    //var rx = new Regex()
+
+                    i++;
+                }
+            }
+
+            //var editor = new XbimEditorCredentials
+            //{
+            //    ApplicationDevelopersName = "xbim developer",
+            //    ApplicationFullName = "xbim toolkit",
+            //    ApplicationIdentifier = "xbim",
+            //    ApplicationVersion = "4.0",
+            //    EditorsFamilyName = "Santini Aichel",
+            //    EditorsGivenName = "Johann Blasius",
+            //    EditorsOrganisationName = "Independent Architecture"
+            //};
+
+            using (var model = IfcStore.Create(/*editor,*/ XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel))
+            {
+                //var ownerhistory = model.OwnerHistoryAddObject;
+                using (var txn = model.BeginTransaction("Hello Wall"))
+                {
+
+                    model.DefaultOwningApplication.ApplicationDeveloper.Name = ADN;
+                    model.DefaultOwningApplication.ApplicationFullName = AFN;
+                    model.DefaultOwningApplication.ApplicationIdentifier = AI;
+                    model.DefaultOwningApplication.Version = AV;
+
+                    model.DefaultOwningUser.ThePerson.GivenName = EGN;
+                    model.DefaultOwningUser.ThePerson.FamilyName = EFN;
+
+                    model.DefaultOwningUser.TheOrganization.Name = EON;
+
+                    //there should always be one project in the model
+                    var project = model.Instances.New<IfcProject>(p =>
+                    {
+                        p.GlobalId = "globalID";
+                        p.Description = "Description";
+                        p.Name = "Name";
+                        //p.UnitsInContext.SetOrChangeSiUnit(Xbim.Ifc4.Interfaces.IfcUnitEnum.LENGTHUNIT, Xbim.Ifc4.Interfaces.IfcSIUnitName.METRE,null);
+                    });
+
+                    Console.WriteLine(project.GetHashCode());
+
+                    //our shortcut to define basic default units
+                    project.Initialize(ProjectUnits.SIUnitsUK);
+
+                    //var window = model.Instances.New<IfcWindow>(w =>
+
+
+                    //create simple object and use lambda initializer to set the name
+                    var wall = model.Instances.New<IfcWall>(w => w.Name = "The very first wall");
+
+                    //set a few basic properties
+                    model.Instances.New<IfcRelDefinesByProperties>(rel =>
+                    {
+                        rel.RelatedObjects.Add(wall);
+                        rel.RelatingPropertyDefinition = model.Instances.New<IfcPropertySet>(pset =>
+                        {
+                            pset.Name = "Basic set of properties";
+                            pset.HasProperties.AddRange(new[] {
+                                model.Instances.New<IfcPropertySingleValue>(p =>
+                                {
+                                    p.Name = "Text property";
+                                    p.NominalValue = new IfcText("Any arbitrary text you like");
+                                }),
+                                model.Instances.New<IfcPropertySingleValue>(p =>
+                                {
+                                    p.Name = "Length property";
+                                    p.NominalValue = new IfcLengthMeasure(56.0);
+                                }),
+                                model.Instances.New<IfcPropertySingleValue>(p =>
+                                {
+
+                                    p.Name = "Number property";
+                                    p.NominalValue = new IfcNumericMeasure(789.2);
+                                }),
+                                model.Instances.New<IfcPropertySingleValue>(p =>
+                                {
+                                    p.Name = "Logical property";
+                                    p.NominalValue = new IfcLogical(true);
+                                })
+                            });
+                        });
+                    });
+
+                    txn.Commit();
+                }
+                model.SaveAs(fileName);
+                return model;
+            }
+        }
+        public static IfcStore GenerateWindow(IfcStore model, SparqlResultSet SRS)
+        {
+            List<SparqlResult> SRSList = SRS.Results;
+            //List<Tuple<IfcBuildingElement, string>> buildingelements = null;
+
+            using (var txn = model.BeginTransaction())
+            {
+                foreach (SparqlResult SingleResult in SRSList)
+                {
+
+                    IfcBuildingElement window = model.Instances.New<IfcWindow>(w =>
+                    {
+                        // IfcRoot
+                        w.GlobalId = SingleResult.HasBoundValue("globalId_IfcRoot") ? SingleResult["globalId_IfcRoot"].ToString() : null;
+                        w.Name = SingleResult.HasBoundValue("name_IfcRoot") ? SingleResult["name_IfcRoot"].ToString() : null;
+                        w.Description = SingleResult.HasBoundValue("description_IfcRoot") ? SingleResult["description_IfcRoot"].ToString() : null;
+
+                        //if (SingleResult.HasBoundValue("objectPlacement_IfcProduct")) { 
+                        w.ObjectPlacement = Setobjectplcm(model, SingleResult);
+                        //}
+
+                        // ?element overallHeight_IfcWindow / expr:hasDouble ?overallHeight_IfcWindow
+                        if (SingleResult.HasBoundValue("overallHeight_IfcWindow"))
+                        {
+                            w.OverallWidth = Double.Parse(SingleResult["overallHeight_IfcWindow"].ToString(), provider);
+                        }
+
+                        // ?element overallWidth_IfcWindow / expr:hasDouble ?overallWidth_IfcWindow
+                        if (SingleResult.HasBoundValue("overallWidth_IfcWindow"))
+                        {
+                            w.OverallWidth = Double.Parse(SingleResult["overallWidth_IfcWindow"].ToString(), provider);
+                            //w.OverallWidth.GetType().
+
+                        }
+                        //w.OverallWidth = SingleResult.HasBoundValue("overallWidth_IfcWindow") ? double.Parse(SingleResult["overallWidth_IfcWindow"].ToString()) : null;
+
+                        //ifc:partitioningType_IfcWindow / rdfs:label
+                        if (SingleResult.HasBoundValue("partitioningType_IfcWindow"))
+                        {
+                            var enumList = Enum.GetValues(typeof(IfcWindowTypePartitioningEnum));
+                            foreach (var senum in enumList)
+                            {
+                                if (SingleResult["partitioningType_IfcWindow"].ToString() == senum.ToString())
+                                {
+                                    w.PartitioningType = (IfcWindowTypePartitioningEnum?)senum;
+                                }
+                            }
+                        }
+
+                        // ifc:userDefinedPartitioningType_IfcWindow / expr:hasString
+                        w.UserDefinedPartitioningType = SingleResult.HasBoundValue("userDefinedPartitioningType_IfcWindow") ? SingleResult["userDefinedPartitioningType_IfcWindow"].ToString() : null;
+
+                    });
+
+                    string id = SingleResult.HasBoundValue("element") ? SingleResult["element"].ToString() : null;
+
+                    try
+                    {
+                        buildingelementslist.Add(id, window);
+                    }
+                    catch (ArgumentException)
+                    {
+                        Console.WriteLine("An element with Key = " + SingleResult["element"].ToString() + " already exists");
+                    }
+                }
+
+
+
+                //var wall = model.Instances.New<IfcWall>(w => w.Name = "The very first wall");
+
+                //model.Instances.New<IfcRelContainedInSpatialStructure>(x =>
+                //{
+                //    x.Name = "Test";
+                //    x.RelatedElements.Add((IfcProduct)model.Instances.Where<IfcProduct>(w => w.GlobalId == "xyz"));
+                //    x.RelatingStructure = site;
+                //});
+                txn.Commit();
+            }
+
+
+
+            return model;
+
+        }
+
+        public static IfcObjectPlacement Setobjectplcm(IfcStore model, SparqlResult SR)
+        {
+
+            IfcLocalPlacement objplcm = model.Instances.New<IfcLocalPlacement>(l =>
+            {
+                // ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement / rdf:type
+                l.RelativePlacement = /*IfcAxis2Placement3D or IfcAxis2Placement2D*/model.Instances.New<IfcAxis2Placement3D>(a =>
+                {
+                    // ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement / ifc:location_IfcPlacement
+                    a.Location = model.Instances.New<IfcCartesianPoint>(c =>
+                    {
+                        // ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+                        // ifc:location_IfcPlacement / ifc:coordinates_IfcCartesianPoint /
+                        // ...
+                        // list:hasContents / expr:hasDouble
+
+                        if (SR.HasBoundValue("coordinates_IfcCartesianPoint_X"))
+                        {
+                            c.X = Double.Parse(SR["coordinates_IfcCartesianPoint_X"].ToString(), provider);
+                        };
+
+                        if (SR.HasBoundValue("coordinates_IfcCartesianPoint_Y"))
+                        {
+                            // list:hasNext / list:hasContents / expr:hasDouble
+                            c.Y = Double.Parse(SR["coordinates_IfcCartesianPoint_Y"].ToString(), provider);
+                        }
+
+                        if (SR.HasBoundValue("coordinates_IfcCartesianPoint_Z"))
+                        {
+                            // list:hasNext / list:hasNext / list:hasContents / expr:hasDouble
+                            c.Z = Double.Parse(SR["coordinates_IfcCartesianPoint_Z"].ToString(), provider);
+                        }
+                    });
+
+
+                    // axis_IfcAxis2Placement3D
+                    a.Axis = model.Instances.New<IfcDirection>(d =>
+                    {
+                        //inst:IfcDirection_110 ifc:directionRatios_IfcDirection / list:hasNext* / list:hasContents / expr:hasDouble ?Value
+                        d.SetXYZ(0, 0, 1); // if (?Value.Count() = 3)
+                    });
+
+                    // refDirection_IfcAxis2Placement3D
+                    a.RefDirection = model.Instances.New<IfcDirection>(d =>
+                    {
+                        if (SR.HasBoundValue("refDirection_IfcAxis2Placement3D_X"))
+                        {
+                            // list:hasContents / expr:hasDouble
+                            d.X = Double.Parse(SR["refDirection_IfcAxis2Placement3D_X"].ToString(), provider);
+                        }
+                        if (SR.HasBoundValue("refDirection_IfcAxis2Placement3D_Y"))
+                        {
+                            // list:hasNext / list:hasContents / expr:hasDouble
+                            d.Y = Double.Parse(SR["refDirection_IfcAxis2Placement3D_Y"].ToString(), provider);
+                        }
+                        if (SR.HasBoundValue("refDirection_IfcAxis2Placement3D_Z"))
+                        {
+                            // list:hasNext / list:hasNext / list:hasContents / expr:hasDouble
+                            d.Z = Double.Parse(SR["refDirection_IfcAxis2Placement3D_Z"].ToString(), provider);
+                        }
+                    });
+
+                });
+            });
+            return objplcm;
+
+        }
+
+        // ----- NEW -----
+
+        public static (IfcStore, Dictionary<string, dynamic>) GenerateIfcProject(IfcStore model, Dictionary<string, Dictionary<string, List<dynamic>>> results)
+        {
+            using (model)
+            {                
+                //var ownerhistory = model.OwnerHistoryAddObject;
+                using (var txn = model.BeginTransaction("IfcProject"))
+                {
+
+                    #region IfcObjectDefinition
+                    // get Assembly from Ifc4
+                    Assembly assembly = Assembly.Load("Xbim.Ifc4");
+
+                    IEnumerable<Type> allnonabstracttypes = assembly.GetTypes().Where(i => i.IsAbstract == false & i.IsSubclassOf(typeof(PersistEntity)));
+
+                    IEnumerable<string> alltypesname = allnonabstracttypes.Select(a => a.Name);
+
+                    // Vergess dies nicht: Könnte krass sein Bruder.
+                    //IEnumerable<Type> test = assembly.GetTypes().Where(i => i.BaseType == typeof(PersistEntity));
+
+
+
+                    // get all subtypes from IfcRoot (e.g. IfcWall, IfcWindow as well as IfcBuilding Element
+                    IEnumerable<Type> objectdefinitionsubtypes = allnonabstracttypes.Where(t => t.IsSubclassOf(typeof(IfcObjectDefinition)));
+
+                    IEnumerable<string> objectdefinitionsubtypesname = objectdefinitionsubtypes.Select(a => a.Name);
+
+                    // Base attributes (e.g.: globalId, name, description)
+                    // subtypes of IfcObjectDefinition
+
+                    // B.1.1 IfcPropertyAbstraction & PhysicalQuantity
+                    SparqlQuery SQproperty = Queriebuilder.querieobject("IfcPropertyAbstraction");
+                    SparqlResultSet SRSproperty = Queriebuilder.abfrage(SQproperty);
+
+                    Dictionary<string, Dictionary<string, List<dynamic>>> resultsproperty = Graph2Ifc.sortresults(SRSproperty);
+
+
+                    SparqlQuery SQphysicalquantity = Queriebuilder.querieobject("IfcPhysicalQuantity");
+                    SparqlResultSet SRSphysicalquantity = Queriebuilder.abfrage(SQphysicalquantity);
+
+                    Dictionary<string, Dictionary<string, List<dynamic>>> resultsphysicalquantity = Graph2Ifc.sortresults(SRSphysicalquantity);
+
+
+                    Dictionary<string, Dictionary<string, List<dynamic>>> properyquantity = resultsproperty.Concat(resultsphysicalquantity).ToDictionary(x => x.Key, x => x.Value);
+
+
+                    IEnumerable<Type> properyquantityresource = allnonabstracttypes.Where(t => t.IsSubclassOf(typeof(IfcPhysicalQuantity)) || t.IsSubclassOf(typeof(IfcSimpleProperty)));
+
+                    IEnumerable<string> properyquantityresourcenames = properyquantityresource.Select(a => a.Name);
+
+
+                    IEnumerable<Type> valuesubtypes = assembly.GetTypes().Where(t => typeof(IIfcValue).IsAssignableFrom(t) && !t.IsInterface);
+
+                    IEnumerable<string> valuesubtypesnames = valuesubtypes.Select(a => a.Name);
+
+
+                    // B.1 IfcPropertyDefinition
+                    SparqlQuery SQpropertydefinition = Queriebuilder.querieobject("IfcPropertyDefinition"); // IfcDefinitionSelect
+                    SparqlResultSet SRSpropertydefinition = Queriebuilder.abfrage(SQpropertydefinition);
+
+                    Dictionary<string, Dictionary<string, List<dynamic>>> resultspropertydefinition = Graph2Ifc.sortresults(SRSpropertydefinition);
+
+                    IEnumerable<Type> propertysubtypes = assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(IfcPropertyDefinition)));
+
+                    IEnumerable<string> propertysubtypesnames = propertysubtypes.Select(a => a.Name);
+
+
+                    Dictionary<string, Dictionary<string, List<dynamic>>> allresults = results.Concat(properyquantity).Concat(resultspropertydefinition).ToDictionary(x => x.Key, x => x.Value);
+
+                    foreach (var instanz in allresults.Where(
+                        i =>
+                        alltypesname.Contains(
+                            i.Key.Substring(
+                                i.Key.LastIndexOf("/") + 1,
+                                i.Key.LastIndexOf("_") - i.Key.LastIndexOf("/") - 1))
+                        ))
+                    {
+                        string element = instanz.Key;
+
+                        // get string from Instance to identify the IfcType from e.g:  http://linkedbuildingdata.net/ifc/resources20220103_124941/IfcDoor_17468 --> IfcDoor
+                        string ifcinstanztype = element.Substring(
+                            element.LastIndexOf("/") + 1,
+                            element.LastIndexOf("_") - element.LastIndexOf("/") - 1);
+
+                        Type singletype = allnonabstracttypes.First(t => t.Name == ifcinstanztype);
+
+                        dynamic ifcentity = model.Instances.New(singletype);
+
+                        persistentitylist.Add(element, ifcentity);
+                    }
+
+                    foreach (var instanz in results.Where(
+                        i => 
+                        alltypesname.Contains(
+                            i.Key.Substring(
+                                i.Key.LastIndexOf("/") + 1,
+                                i.Key.LastIndexOf("_") - i.Key.LastIndexOf("/") - 1))
+                        )
+                    )
+                    {
+                        string element = instanz.Key; // z.B. inst:IfcProject_66
+
+                        // get string from Instance to identify the IfcType from e.g:  http://linkedbuildingdata.net/ifc/resources20220103_124941/IfcDoor_17468 --> IfcDoor
+                        string ifcinstanztype = element.Substring(
+                            element.LastIndexOf("/") + 1,
+                            element.LastIndexOf("_") - element.LastIndexOf("/") - 1);
+
+                        // get the Type from the subtypes of IfcRoot which name is identical to the Type-Substring of the Instance
+                        Type singletype = allnonabstracttypes.First(t => t.Name == ifcinstanztype);
+
+                        //(Type, KeyValuePair<string, Dictionary<string, List<string>>>) ifcetemp = (singletype, instanz);
+
+                        // create a new model.Instance of the Type
+                        dynamic ifcentity = model.Instances.OfType(singletype.Name, true).Where(i => i.EntityLabel == persistentitylist[element].EntityLabel).First(); ;
+
+                        Dictionary<string, List<dynamic>> attributeandvalues = instanz.Value;
+
+                        foreach (string attribute in attributeandvalues.Keys.Where(
+                            k => 
+                            singletype.GetProperties().Select(p => p.Name.ToLower()).Contains(k.ToLower()) 
+                            //&& attributeandvalues[k].All(i => i.GetType() == typeof(LiteralNode))
+                            ))
+                        {
+                            List<dynamic> values = attributeandvalues[attribute];
+
+                            var Nodetype = values.Select(k => k.GetType());
+                            var prop = singletype.GetProperties().Where(p => p.Name.ToLower() == attribute.ToLower()).First();
+
+                            Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : prop.PropertyType;
+
+                            bool allLiteral = values.All(k => k.GetType() == typeof(LiteralNode));
+                            if (allLiteral)
+                            {
+                                if (rtype.IsEnum) 
+                                { 
+                                    prop.SetValue(ifcentity, Enum.Parse(rtype, attributeandvalues[attribute].FirstOrDefault().Value)); 
+                                }
+                                else if (rtype.IsSubclassOf(typeof(ValueType)) && rtype.Name != "IfcCompoundPlaneAngleMeasure")
+                                {
+                                    var n = Activator.CreateInstance(rtype, attributeandvalues[attribute].FirstOrDefault().Value);
+                                    prop.SetValue(ifcentity, n);
+                                }
+                                if (rtype == typeof(IfcProperty) | rtype == typeof(IfcPhysicalQuantity))
+                                {
+                                    values.ForEach(
+                                        v =>
+                                        prop.GetValue(ifcentity).Add(persistentitylist[v.AsString()])
+                                        );
+                                }
+
+
+
+                            }
+
+
+                            bool allUri = values.All(k => k.GetType() == typeof(UriNode));
+                            if (allUri)
+                            {
+
+                            }
+                            Console.Write("XXX");
+
+                            //Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : prop.PropertyType;
+
+                            //if (rtype.IsEnum)
+                            //{
+                            //    prop.SetValue(ifcentity, Enum.Parse(rtype, attributeandvalues[key].FirstOrDefault().Value));
+                            //}
+                            //else if (rtype.IsSubclassOf(typeof(ValueType)) && rtype.Name != "IfcCompoundPlaneAngleMeasure")
+                            //{
+                            //    var n = Activator.CreateInstance(rtype, attributeandvalues[key].FirstOrDefault().Value);
+                            //    prop.SetValue(ifcentity, n);
+                            //}
+
+
+                        }
+
+                        foreach (var prop in singletype.GetProperties().Where(
+                            p => (
+                            p.CanWrite &&
+                            p.PropertyType.IsValueType &&
+                            attributeandvalues.Keys.Contains(p.Name.ToLower())
+                            ) /*|| p.Name == "IsDefinedBy"*/))
+                        {
+                            Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : prop.PropertyType;
+
+                            string key = attributeandvalues.Keys.Where(i => i == prop.Name.ToLower()).FirstOrDefault();
+
+                            if (rtype.IsEnum)
+                            {                               
+                                prop.SetValue(ifcentity, Enum.Parse(rtype, attributeandvalues[key].FirstOrDefault().Value));
+                            }
+                            else if (rtype.IsSubclassOf(typeof(ValueType)) && rtype.Name != "IfcCompoundPlaneAngleMeasure")
+                            {
+                                var n = Activator.CreateInstance(rtype, attributeandvalues[key].FirstOrDefault().Value);
+                                prop.SetValue(ifcentity, n);
+                            }                        
+                        }                      
+
+                        try
+                        {
+                            if (persistentitylist.ContainsKey(element))
+                            {
+                                persistentitylist[element] = ifcentity;
+                            }
+                            else 
+                            {
+                                persistentitylist.Add(element, ifcentity);
+                            }
+                        }
+                        catch (ArgumentException)
+                        {
+                            Console.WriteLine("An element with Key = " + element + " already exists");
+                        }
+                    }
+                    #endregion
+
+                    
+                    #region IfcPropertySets
+
+                    //// B.1.1 IfcPropertyAbstraction & PhysicalQuantity
+                    //SparqlQuery SQproperty = Queriebuilder.querieobject("IfcPropertyAbstraction");
+                    //SparqlResultSet SRSproperty = Queriebuilder.abfrage(SQproperty);
+
+                    //Dictionary<string, Dictionary<string, List<dynamic>>> resultsproperty = Graph2Ifc.sortresults(SRSproperty);
+
+
+                    //SparqlQuery SQphysicalquantity = Queriebuilder.querieobject("IfcPhysicalQuantity");
+                    //SparqlResultSet SRSphysicalquantity = Queriebuilder.abfrage(SQphysicalquantity);
+
+                    //Dictionary<string, Dictionary<string, List<dynamic>>> resultsphysicalquantity = Graph2Ifc.sortresults(SRSphysicalquantity);
+
+
+
+                    //Dictionary<string, Dictionary<string, List<dynamic>>> properyquantity = resultsproperty.Concat(resultsphysicalquantity).ToDictionary(x => x.Key, x => x.Value);
+
+
+                    //IEnumerable<Type> properyquantityresource = assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(IfcPhysicalQuantity)) || t.IsSubclassOf(typeof(IfcSimpleProperty)));
+
+                    //IEnumerable<string> properyquantityresourcenames = properyquantityresource.Select(a => a.Name);
+                                    
+                    
+                    //IEnumerable<Type> valuesubtypes = assembly.GetTypes().Where(t => typeof(IIfcValue).IsAssignableFrom(t) && !t.IsInterface);
+
+                    //IEnumerable<string> valuesubtypesnames = valuesubtypes.Select(a => a.Name);
+
+
+
+
+                    foreach (var instanz in
+                        properyquantity.Where(
+                            i =>
+                            properyquantityresourcenames.Contains(
+                                i.Key.Substring(
+                                    i.Key.LastIndexOf("/") + 1,
+                                    i.Key.LastIndexOf("_") - i.Key.LastIndexOf("/") - 1)
+                                )
+                            )
+                        )
+                    {
+
+                        string ifcinstanz = instanz.Key; // z.B. IfcProject_66
+                        var values = instanz.Value;
+
+                        // get string from Instance to identify the IfcType from e.g:  http://linkedbuildingdata.net/ifc/resources20220103_124941/IfcDoor_17468 --> IfcDoor
+                        string ifcinstanztype = ifcinstanz.Substring(
+                            ifcinstanz.LastIndexOf("/") + 1,
+                            ifcinstanz.LastIndexOf("_") - ifcinstanz.LastIndexOf("/") - 1);
+
+
+                        // get the Type from the subtypes of IfcRoot which name is identical to the Type-Substring of the Instance
+                        Type singletype = properyquantityresource.First(t => t.Name == ifcinstanztype);
+
+                        //(Type, KeyValuePair<string, Dictionary<string, List<string>>>) ifcetemp = (singletype, instanz);
+
+                        // create a new model.Instance of the Type
+                        dynamic ifcentity = null;
+
+
+                        if (persistentitylist.ContainsKey(ifcinstanz))
+                        {
+                            ifcentity = model.Instances.OfType(singletype.Name, true).Where(i => i.EntityLabel == persistentitylist[ifcinstanz].EntityLabel).First();
+                        }
+                        else if (!persistentitylist.ContainsKey(ifcinstanz))
+                        {
+                            ifcentity = model.Instances.New(singletype);
+                        }
+
+                        foreach (var prop in singletype.GetProperties().Where(
+                            p => (
+                            p.CanWrite && 
+                            values.Keys.Contains(p.Name.ToLower())
+                            ))) 
+                            //attributeandvalues.Keys.Any(i => Regex.IsMatch(i, Regex.Escape(p.Name.ToLower() + "*").Replace(@"\*", ".*")))
+                        {
+                            Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : prop.PropertyType;
+                            string key = values.Keys.Where(i => i == prop.Name.ToLower()).FirstOrDefault(); //.Where(i => Regex.IsMatch(i, Regex.Escape(prop.Name.ToLower() + "*").Replace(@"\*", ".*"))).FirstOrDefault();
+
+                            if (rtype != typeof(IfcValue))
+                            {
+                                object value = Activator.CreateInstance(rtype, values[key].FirstOrDefault().Value);
+                                prop.SetValue(ifcentity, value);
+
+                            }
+                            else if (rtype == typeof(IfcValue))
+                            {
+                                //string valuetypestring = key.Substring(key.IndexOf("|") + 2);
+                                Uri valuetypeuri = values[key].FirstOrDefault().DataType;
+                                string valuetypestring = valuetypeuri.Fragment.TrimStart('#');
+                                Type valuetype = valuesubtypes.Where(t => t.Name == valuetypestring).FirstOrDefault();
+                                // ttl Konvertierungsfehler
+                                if(valuetypestring == typeof(IfcGloballyUniqueId).Name) { valuetype = typeof(IfcLabel); }
+
+                                object value = Activator.CreateInstance(valuetype, values[key].FirstOrDefault().Value);
+                                prop.SetValue(ifcentity, value);
+
+                            }
+                            //if (rtype.IsEnum)
+                            //{
+                            //    string en = attributeandvalues[prop.Name.ToLower()].FirstOrDefault();
+                            //    prop.SetValue(ifcentity, Enum.Parse(rtype, en));
+                            //}
+                            //else if (rtype.IsSubclassOf(typeof(ValueType)) && rtype.Name != "IfcCompoundPlaneAngleMeasure")
+                            //{
+                            //    var n = Activator.CreateInstance(rtype, attributeandvalues[prop.Name.ToLower()].FirstOrDefault());
+                            //    prop.SetValue(ifcentity, n);
+                            //}
+                            
+                        }
+                        try
+                        {
+                            if (persistentitylist.ContainsKey(ifcinstanz))
+                            {
+                                persistentitylist[ifcinstanz] = ifcentity;
+                            }
+                            else
+                            {
+                                persistentitylist.Add(ifcinstanz, ifcentity);
+                            }
+                        }
+                        catch (ArgumentException)
+                        {
+                            Console.WriteLine("An element with Key = " + ifcinstanz + " already exists");
+                        }
+                    }
+
+                    // B.1 IfcPropertyDefinition
+                    //SparqlQuery SQpropertydefinition = Queriebuilder.querieobject("IfcPropertyDefinition"); // IfcDefinitionSelect
+                    //SparqlResultSet SRSpropertydefinition = Queriebuilder.abfrage(SQpropertydefinition);
+
+                    //Dictionary<string, Dictionary<string, List<dynamic>>> resultspropertydefinition = Graph2Ifc.sortresults(SRSpropertydefinition);
+
+                    //IEnumerable<Type> propertysubtypes = assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(IfcPropertyDefinition)));
+
+                    //IEnumerable<string> propertysubtypesnames = propertysubtypes.Select(a => a.Name);
+
+                    foreach (var instanz in
+                        resultspropertydefinition.Where(
+                            i =>
+                            propertysubtypesnames.Contains(
+                                i.Key.Substring(
+                                    i.Key.LastIndexOf("/") + 1,
+                                    i.Key.LastIndexOf("_") - i.Key.LastIndexOf("/") - 1)
+                                )
+                            )
+                        )
+                    {
+
+                        string ifcinstanz = instanz.Key; // z.B. IfcProject_66
+                        var values = instanz.Value;
+
+                        // get string from Instance to identify the IfcType from e.g:  http://linkedbuildingdata.net/ifc/resources20220103_124941/IfcDoor_17468 --> IfcDoor
+                        string ifcinstanztype = ifcinstanz.Substring(
+                            ifcinstanz.LastIndexOf("/") + 1,
+                            ifcinstanz.LastIndexOf("_") - ifcinstanz.LastIndexOf("/") - 1);
+
+
+                        // get the Type from the subtypes of IfcRoot which name is identical to the Type-Substring of the Instance
+                        Type singletype = propertysubtypes.First(t => t.Name == ifcinstanztype);
+
+                        //(Type, KeyValuePair<string, Dictionary<string, List<string>>>) ifcetemp = (singletype, instanz);
+
+                        // create a new model.Instance of the Type
+                        dynamic ifcentity = null;
+
+
+                        if (persistentitylist.ContainsKey(ifcinstanz))
+                        {
+                            ifcentity = model.Instances.OfType(singletype.Name, true).Where(i => i.EntityLabel == persistentitylist[ifcinstanz].EntityLabel).First();
+                        }
+                        else if (!persistentitylist.ContainsKey(ifcinstanz))
+                        {
+                            ifcentity = model.Instances.New(singletype);
+                        }
+
+                        foreach (var prop in singletype.GetProperties().Where(
+                            p => (
+                            values.Keys.Contains(p.Name.ToLower())
+                            )))
+                        {
+                            Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : prop.PropertyType;
+                            string key = values.Keys.Where(i => i == prop.Name.ToLower()).FirstOrDefault();
+
+                            List<dynamic> valuelist = values[key];
+
+                            if (rtype == typeof(IfcProperty) | rtype == typeof(IfcPhysicalQuantity))
+                            {
+                                valuelist.ForEach(
+                                    v =>
+                                    prop.GetValue(ifcentity).Add(persistentitylist[v.AsString()])
+                                    );                                                                
+                            }
+                            else if (rtype.IsSubclassOf(typeof(ValueType)) && !rtype.IsEnum)
+                            {
+                                var n = Activator.CreateInstance(rtype, values[key].FirstOrDefault().Value);
+                                prop.SetValue(ifcentity, n);
+                            } 
+                            else if (rtype.IsEnum)
+                            {
+
+                                prop.SetValue(ifcentity, Enum.Parse(rtype, values[key].FirstOrDefault().Value));
+                            }
+                            addentity(ifcentity.GetType().Name + "_" + ifcentity.EntityLabel.ToString(), ifcentity);
+
+                        }
+                        try
+                        {
+                            if (persistentitylist.ContainsKey(ifcinstanz))
+                            {
+                                persistentitylist[ifcinstanz] = ifcentity;
+                            }
+                            else
+                            {
+                                persistentitylist.Add(ifcinstanz, ifcentity);
+                            }
+                        }
+                        catch (ArgumentException)
+                        {
+                            Console.WriteLine("An element with Key = " + ifcinstanz + " already exists");
+                        }
+                    }
+                    #endregion
+
+
+                    #region IfcRelationship
+                    foreach (var instanz in results.Where(
+                        i =>
+                        objectdefinitionsubtypesname.Contains(
+                            i.Key.Substring(
+                                i.Key.LastIndexOf("/") + 1,
+                                i.Key.LastIndexOf("_") - i.Key.LastIndexOf("/") - 1))
+                        )
+                        )
+                    {
+                        string ifcinstanz = instanz.Key; // z.B. IfcProject_66
+                        var values = instanz.Value;
+
+                        // get string from Instance to identify the IfcType from e.g:  http://linkedbuildingdata.net/ifc/resources20220103_124941/IfcDoor_17468 --> IfcDoor
+                        string ifcinstanztype = ifcinstanz.Substring(
+                            ifcinstanz.LastIndexOf("/") + 1,
+                            ifcinstanz.LastIndexOf("_") - ifcinstanz.LastIndexOf("/") - 1);
+
+
+                        // get the Type from the subtypes of IfcRoot which name is identical to the Type-Substring of the Instance
+                        Type singletype = objectdefinitionsubtypes.First(t => t.Name == ifcinstanztype);
+
+                        dynamic ifcrelentity = null;
+
+                        foreach (var prop in singletype.GetProperties().Where(
+                            p =>
+                            values.Keys.Contains(p.Name.ToLower()) &&
+                            p.CustomAttributes.Select(w => w.AttributeType).Contains(typeof(InverseProperty))
+                            // Test:
+                            //&& p.Name.ToLower() == "isdecomposedby"
+                            ))
+                        {
+                            string key = values.Keys.Where(i => i == prop.Name.ToLower()).FirstOrDefault();
+                            List<dynamic> valuelist = values[key];
+
+                            // check if the other related value is available -> if not, it is going to break the foreach loop.
+                            // So there is not going to be an Error later or an IFCRelationship Entity with only one related IfcObjectDefinition
+                            if (!persistentitylist.Keys.Intersect(valuelist.Select(v => v.ToString())).Any())
+                            {
+                                continue;
+                            }
+
+                            Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : null;
+
+                            // get property name of relevent IfcRelationship class. e.g. RelatedObject
+                            string invpropname = prop.CustomAttributes.Where(w => w.AttributeType == typeof(InverseProperty)).FirstOrDefault().ConstructorArguments.FirstOrDefault().Value.ToString();
+                            // get prop from relevant IfcRelationship class
+                            PropertyInfo invprop = rtype.GetProperties().Where(r => r.Name == invpropname.ToString() && r.DeclaringType == rtype).FirstOrDefault();
+
+                            ifcrelentity = model.Instances.New(rtype);
+                            
+                            if (invprop.GetSetMethod() != null)
+                            {
+                                invprop.SetValue(ifcrelentity, persistentitylist[ifcinstanz]);
+                            }
+                            else if (invprop.PropertyType.Name == "IItemSet`1")
+                            {
+                                invprop.GetValue(ifcrelentity).Add(persistentitylist[ifcinstanz]);
+                            }
+
+                            // get PropertyInfo of Property for value
+                            PropertyInfo valueprop = rtype.GetProperties().Where(f => f.Name != invpropname && f.DeclaringType == rtype).FirstOrDefault();
+
+
+                            if (/*single value in Ifc: */valueprop.GetSetMethod() != null && /* Single Value in the attributeandvalues */valuelist.Count == 1)
+                            {                                
+                                valueprop.SetValue(ifcrelentity, persistentitylist[valuelist.FirstOrDefault().ToString()]);
+
+                                addentity(ifcrelentity.GetType().Name + "_" + ifcrelentity.EntityLabel.ToString(), ifcrelentity);
+                            }
+                            else if (/* Value List in Ifc: */valueprop.PropertyType.Name == "IItemSet`1")
+                            {
+                                valuelist.ForEach(
+                                    v => 
+                                    valueprop.GetValue(ifcrelentity).Add(persistentitylist[v.ToString()])
+                                    );
+
+                                addentity(ifcrelentity.GetType().Name + "_" + ifcrelentity.EntityLabel.ToString(), ifcrelentity);
+                            }
+                            else if (/*single value in Ifc: */valueprop.GetSetMethod() != null && /* but multiple input attributeandvalues */valuelist.Count > 1)
+                            {
+                                valueprop.SetValue(ifcrelentity, persistentitylist[valuelist.First().ToString()]);
+
+                                addentity(ifcrelentity.GetType().Name + "_" + ifcrelentity.EntityLabel.ToString(), ifcrelentity);
+
+                                foreach (INode singlevalue in valuelist.Skip(1))
+                                {
+                                    ifcrelentity = model.Instances.New(rtype);
+
+                                    if (invprop.GetSetMethod() != null)
+                                    {
+                                        invprop.SetValue(ifcrelentity, persistentitylist[ifcinstanz]);
+                                    }
+                                    else if (invprop.PropertyType.Name == "IItemSet`1")
+                                    {
+                                        invprop.GetValue(ifcrelentity).Add(persistentitylist[ifcinstanz]);
+                                    }
+
+                                    valueprop.SetValue(ifcrelentity, persistentitylist[singlevalue.ToString()]);
+
+                                    addentity(ifcrelentity.GetType().Name + "_" + ifcrelentity.EntityLabel.ToString(), ifcrelentity);
+                                }
+                            }
+                        } 
+                    }
+                    #endregion
+
+                    #region IfcRelationship wenn speziell abgefragt
+                    /*
+                    IEnumerable<string> ifcrelationshipsubtypes = assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(IfcRelationship))).Select(a => a.Name);
+
+                    foreach (var instanz in results.Where(
+                        i =>
+                        ifcrelationshipsubtypes.Contains(
+                            i.Key.Substring(
+                                i.Key.LastIndexOf("/") + 1,
+                                i.Key.LastIndexOf("_") - i.Key.LastIndexOf("/") - 1)))
+                    )
+                    {
+                        string element = instanz.Key; // z.B. IfcProject_66
+                        var attributeandvalues = instanz.Value;
+
+                        // get string from Instance to identify the IfcType from e.g:  http://linkedbuildingdata.net/ifc/resources20220103_124941/IfcDoor_17468 --> IfcDoor
+                        string ifcinstanztype = element.Substring(
+                            element.LastIndexOf("/") + 1,
+                            element.LastIndexOf("_") - element.LastIndexOf("/") - 1);
+
+
+                        // get the Type from the subtypes of IfcRoot which name is identical to the Type-Substring of the Instance
+                        Type singletype = objectdefinitionsubtypes.First(t => t.Name == ifcinstanztype);
+
+                        //(Type, KeyValuePair<string, Dictionary<string, List<string>>>) ifcetemp = (singletype, instanz);
+
+                        // create a new model.Instance of the Type
+                        dynamic ifcentity = null;
+
+                        if (persistentitylist.ContainsKey(element))
+                        {
+                            var x = persistentitylist[element];
+                            ifcentity = model.Instances.OfType(singletype.Name, true).Where(i => i.EntityLabel == persistentitylist[element].EntityLabel).First();
+                        }
+                        else if (!persistentitylist.ContainsKey(element))
+                        {
+                            ifcentity = model.Instances.New(singletype);
+                        }
+
+                        foreach (var prop in 
+                            singletype.GetProperties().Where(
+                                p => 
+                                p.CanWrite && attributeandvalues.ContainsKey(p.Name.ToLower())
+                                //p.Name == "IsDefinedBy"
+
+                                )
+                            )
+                        {
+                            Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : null;
+
+                            //methodInfo.Invoke(value, ifcentity);
+                            /*if (!value.StartsWith("http://linkedbuildingdata.net/ifc/resources20220103_124941"))
+                            {
+                                dynamic proptype = prop.PropertyType;
+                                //dynamic value_v1 = Convert.ChangeType(value, proptype);
+                                //prop.SetValue(ifcentity, value_v1);
+                                //Type proptype = prop.PropertyType;
+                                //prop.SetValue(ifcentity, value);
+                                MethodInfo methodInfo = prop.SetMethod;
+                                methodInfo.Invoke(ifcentity, new object[] { value } );                            
+                            }
+
+                            if (prop.PropertyType == typeof(IfcGloballyUniqueId))
+                            {
+                                prop.SetValue(ifcentity, (IfcGloballyUniqueId)attributeandvalues[prop.Name.ToLower()].FirstOrDefault());
+                            }
+                            else if (prop.PropertyType == typeof(IfcIdentifier?))
+                            {
+                                prop.SetValue(ifcentity, (IfcIdentifier?)attributeandvalues[prop.Name.ToLower()].FirstOrDefault());
+                            }
+
+                            else if (prop.PropertyType == typeof(IfcLabel?))
+                            {
+                                prop.SetValue(ifcentity, (IfcLabel?)attributeandvalues[prop.Name.ToLower()].FirstOrDefault());
+                            }
+                            else if (prop.PropertyType == typeof(IfcText?))
+                            {
+                                prop.SetValue(ifcentity, (IfcText?)attributeandvalues[prop.Name.ToLower()].FirstOrDefault());
+
+                            }
+                            else if (prop.PropertyType == typeof(IfcPositiveLengthMeasure?))
+                            {
+                                prop.SetValue(ifcentity, (IfcPositiveLengthMeasure?)Double.Parse(attributeandvalues[prop.Name.ToLower()].FirstOrDefault(), provider));
+                                //var v1 = Convert.ChangeType(attributeandvalues[prop.Name.ToLower()].FirstOrDefault(), prop.PropertyType);
+
+                            }
+                            else if (prop.PropertyType == typeof(IfcBoolean?))
+                            {
+                                prop.SetValue(ifcentity, (IfcBoolean?)bool.Parse(attributeandvalues[prop.Name.ToLower()].FirstOrDefault()));
+                            }
+                            else if (prop.PropertyType.IsSubclassOf(typeof(Enum)))
+                            {
+                                string en = attributeandvalues[prop.Name.ToLower()].FirstOrDefault();
+                                prop.SetValue(ifcentity, Enum.Parse(prop.PropertyType, en));
+                            }
+                            else if (rtype != null && rtype.IsSubclassOf(typeof(Enum)))
+                            {
+                                string en = attributeandvalues[prop.Name.ToLower()].FirstOrDefault();
+                                prop.SetValue(ifcentity, Enum.Parse(rtype, en));
+                            }
+                            else if(prop.PropertyType.IsSubclassOf(typeof(IfcObjectDefinition)))
+                            {
+                                Console.Write("\nResponse: " + prop.PropertyType.FullName + " - " + attributeandvalues[prop.Name.ToLower()][0].ToString() );
+                                foreach (string value in attributeandvalues[prop.Name.ToLower()].Where(v => persistentitylist.ContainsKey(v)))
+                                {
+                                    prop.SetValue(ifcentity, persistentitylist[value]);
+                                }
+                            }
+                        }
+
+
+                        // Relationships
+                        //foreach (var prop in singletype.GetProperties().Where(p => (!p.CanWrite && attributeandvalues.ContainsKey(p.Name.ToLower()))))
+                        //{
+                        //    Type rtype = prop.PropertyType.IsGenericType ? prop.PropertyType.GenericTypeArguments[0] : null;
+
+                        //    if (rtype != null && rtype.IsSubclassOf(typeof(IfcRelationship)))
+                        //    {
+
+                        //        dynamic ifcrelentity = model.Instances.New(rtype);
+
+                        //        ifcrelentity = modifyifcentity(model, ifcrelentity, ifcentity, attributeandvalues[prop.Name.ToLower()]);
+
+                        //        /*var rpropother = rtype.GetProperties().Where(p =>
+                        //            p.Name != (string)prop.CustomAttributes.First().ConstructorArguments[0].Value
+                        //            && p.DeclaringType.IsSubclassOf(typeof(IfcRelationship))).First();
+
+                        //        rpropother.SetValue(ifcrelentity, persistentitylist[value]);
+
+                        //        var rpropthis = rtype.GetProperties().Where(p => p.Name == (string)prop.CustomAttributes.First().ConstructorArguments[0].Value).First();
+                        //        if (rpropthis != null)
+                        //        {
+                        //            rpropthis.SetValue(ifcrelentity, ifcentity);
+                        //        }
+                        //        //ifcrelentity.RelatingObject = ifcentity;                                                                                       
+                        //    }
+                        //}
+
+                        try
+                        {
+                            if (persistentitylist.ContainsKey(element))
+                            {
+                                persistentitylist[element] = ifcentity;
+                            }
+                            else
+                            {
+                                persistentitylist.Add(element, ifcentity);
+                            }
+                        }
+                        catch (ArgumentException)
+                        {
+                            Console.WriteLine("An element with Key = " + element + " already exists");
+                        }
+                    }*/
+                    #endregion
+
+
+                    txn.Commit();
+                }
+                model.SaveAs("../../../test.ifc");
+                return (model, persistentitylist);
+            }
+        }
+
+        public static void addentity(string ifcinstanz, dynamic ifcentity)
+        {
+            try
+            {
+                if (persistentitylist.ContainsKey(ifcinstanz))
+                {
+                    persistentitylist[ifcinstanz] = ifcentity;
+                }
+                else
+                {
+                    persistentitylist.Add(ifcinstanz, ifcentity);
+                }
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine("An element with Key = " + ifcinstanz + " already exists");
+            }
+        }
+
+        public static IfcSite modifyifcentity(IfcStore model, IfcSite project, Dictionary<string, Dictionary<string, List<string>>> results)
+        {
+            project.RefLatitude = IfcCompoundPlaneAngleMeasure.FromDouble((double)49.61566000);
+            project.RefLatitude = IfcCompoundPlaneAngleMeasure.FromDouble((double)49.61566000);
+            IfcCompoundPlaneAngleMeasure cpam = new IfcCompoundPlaneAngleMeasure();
+            project.GlobalId = new IfcGloballyUniqueId("Test");
+            
+            //project.a
+
+            return project;
+        }
+
+        public static IfcPolyLoop modifyifcentity(IfcStore model, IfcPolyLoop ifcentity, Dictionary<string, Dictionary<string, List<string>>> results)
+        {
+
+            var x = ifcentity.EntityLabel;
+            ifcentity.Polygon.Add(persistentitylist["dfg"]);
+            //ifcentity.RelatedObjects;
+            //ifcentity.RelatingObject;
+
+            return ifcentity;
+        }
+
+        public static IfcBuilding modifyifcentity(IfcStore model, IfcBuilding ifcentity, Dictionary<string, Dictionary<string, List<string>>> results)
+        {
+            ifcentity.GlobalId = "br";
+            ifcentity.Name = "THIS SOME NAME";
+            ifcentity.Description = "THIS SOME DESCRIPTION";
+            //ifcentity.RelatedObjects;
+            //ifcentity.RelatingObject;
+
+            return ifcentity;
+        }
+
+        public static IfcRelAggregates modifyifcentity(IfcStore model, IfcRelAggregates ifcrelentity, dynamic ifcentity,  List<string> values)
+        {
+            // keine eindeutige filterung, was relatingObject ist
+            // --> bei {IfcSpace decomposes IfcBuildingStorey} wird IfcSpace als relatingObject gesetzt. Es müsste aber IfcBuildingStorey sein.
+
+            ifcrelentity.RelatingObject = ifcentity;
+
+            foreach (var value in values)
+            {
+                if (persistentitylist.ContainsKey(value))
+                {
+                    dynamic pelistROEentity = persistentitylist[value];     // identifieing the relevant ifcentity with the value
+                    Type pelistROEentitytype = pelistROEentity.GetType(); // use the type to identify relevent Ifcentitys before executing the WHERE function,
+                                                                          // otherwise the WHERE function would scroll through every Ifc entity available
+                                                                          // --> better performance, faster
+                    IEnumerable<IPersistEntity> ptypelist = model.Instances.OfType(pelistROEentitytype.Name, true);
+                    dynamic ifcROEentity = ptypelist.Where(i => i.EntityLabel == pelistROEentity.EntityLabel).First();
+                    ifcrelentity.RelatedObjects.Add(ifcROEentity);
+                    ifcrelentity.RelatedObjects[0] = ifcROEentity;
+                }
+            }
+
+            return ifcrelentity;
+        }
+
+        public static IfcRelVoidsElement modifyifcentity(IfcStore model, IfcRelVoidsElement ifcrelentity, dynamic ifcentity, List<string> values)
+        {
+
+            ifcrelentity.RelatingBuildingElement = ifcentity;
+
+            foreach (var value in values)
+            {
+                if (persistentitylist.ContainsKey(value))
+                {
+                    dynamic pelistROEentity = persistentitylist[value];     // identifieing the relevant ifcentity with the value
+                    Type pelistROEentitytype = pelistROEentity.GetType(); // use the type to identify relevent Ifcentitys before executing the WHERE function,
+                                                                          // otherwise the WHERE function would scroll through every Ifc entity available
+                                                                          // --> better performance, faster
+                    IEnumerable<IPersistEntity> ptypelist = model.Instances.OfType(pelistROEentitytype.Name, true);
+                    dynamic ifcROEentity = ptypelist.Where(i => i.EntityLabel == pelistROEentity.EntityLabel).First();
+                    ifcrelentity.RelatedOpeningElement = ifcROEentity;
+                }
+            }
+            return ifcrelentity;
+        }
+        
+        public static IfcProductDefinitionShape modifyifcentity(IfcStore model, IfcProductDefinitionShape ifcrelentity, dynamic ifcentity, List<string> values)
+        {
+            return ifcrelentity;
+        }
+    }
+}

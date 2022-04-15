@@ -1,0 +1,634 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using VDS.RDF;
+using VDS.RDF.Parsing;
+using VDS.RDF.Query;
+using VDS.RDF.Query.Algebra;
+using VDS.RDF.Query.Paths;
+using VDS.RDF.Query.Patterns;
+using VDS.RDF.Query.Filters;
+using VDS.RDF.Query.Builder;
+using VDS.RDF.Query.Expressions.Comparison;
+using VDS.RDF.Query.Expressions;
+using VDS.RDF.Query.Expressions.Primary;
+using VDS.RDF.Query.Expressions.Functions.Sparql.Set;
+using VDS.RDF.Query.Builder.Expressions;
+using VDS.RDF.Query.Expressions.Functions.Sparql.String;
+using VDS.RDF.Query.Expressions.Functions.Sparql.Boolean;
+using VDS.RDF.Query.Expressions.Functions.Sparql;
+
+namespace Graph2Ifc.SPARQLqueries
+{
+    class Queriebuilder
+    {
+        public static string thisisglobal = "thisisglobalTEST";
+
+        public static IGraph temp = new VDS.RDF.Graph();
+
+
+        public static List<ITriplePattern> patternlist = new List<ITriplePattern>();
+        
+        public static ISparqlAlgebra sparqlpattern;
+
+        public static VariablePattern element = new VariablePattern("element");
+
+        public static SequencePath setpathX;
+        public static SequencePath setpathY;
+        public static SequencePath setpathZ;
+
+        public static SparqlRemoteEndpoint SRE = new SparqlRemoteEndpoint(new Uri("http://localhost:7200/repositories/AC20-FZK-Haus"));
+
+        //SparqlQueryParser parser = new SparqlQueryParser();
+        
+        public static NamespaceMapper SetNamespaces()
+        {
+            NamespaceMapper NM = new NamespaceMapper();
+            
+            NM.AddNamespace("inst", new Uri("http://linkedbuildingdata.net/ifc/resources20220103_124941/"));
+            NM.AddNamespace("ifc", new Uri("https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#"));
+            NM.AddNamespace("ifcext", new Uri("http://www.semanticweb.org/aaron/ontologies/2022/1/ifcextension#"));
+            NM.AddNamespace("expr", new Uri("https://w3id.org/express#"));
+            NM.AddNamespace("list", new Uri("https://w3id.org/list#"));
+            NM.AddNamespace("onto", new Uri("http://www.ontotext.com/"));
+            // Konstant:
+            NM.AddNamespace("owl", new Uri("http://www.w3.org/2002/07/owl#"));
+            NM.AddNamespace("rdf", new Uri("http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
+            NM.AddNamespace("rdfs", new Uri("http://www.w3.org/2000/01/rdf-schema#"));
+
+            return NM;
+        }
+
+        //--------------------------------V0.1-START--------------------------------
+
+        // start triple pattern
+        public static void Setupquerie()
+        {
+
+            VariablePattern element = new VariablePattern("element");
+            temp.NamespaceMap.Import(SetNamespaces());
+
+            PropertyPathPattern pathPattern = new PropertyPathPattern(
+                // Subject:
+                element,
+                // Predicate: rdf:type / rdfs:subClassOf*
+                new SequencePath(
+                new Property(temp.CreateUriNode("rdf:type")),
+                new ZeroOrMore(
+                    new Property(temp.CreateUriNode("rdfs:subClassOf")))
+                ),
+                // Object:
+                new NodeMatchPattern(temp.CreateUriNode("ifc:IfcContext"))
+                );
+
+
+            patternlist.Add(pathPattern);
+
+            sparqlpattern = new Bgp(patternlist);
+
+        }
+
+
+        public static void SetpathXYZ()
+        {
+            setpathX =
+                new SequencePath(
+                    new Property(temp.CreateUriNode("list:hasContents")),
+                    new Property(temp.CreateUriNode("expr:hasDouble"))
+                    );
+            
+             setpathY =
+                new SequencePath(
+                    new Property(temp.CreateUriNode("list:hasNext")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("list:hasContents")),
+                        new Property(temp.CreateUriNode("expr:hasDouble"))
+                        )
+                    );
+            
+            setpathZ =
+                new SequencePath(
+                    new Property(temp.CreateUriNode("list:hasNext")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("list:hasNext")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("list:hasContents")),
+                            new Property(temp.CreateUriNode("expr:hasDouble"))
+                            )
+                        )
+                    );
+        }
+
+        public static ISparqlAlgebra Buildppifcroot()
+        {
+
+            Setupquerie();            
+
+            // Prädikat
+            SequencePath globalId_IfcRoot = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:globalId_IfcRoot")),
+                new Property
+                (temp.CreateUriNode("expr:hasString"))
+                );
+            // Objekt ?globalId_IfcRoot
+            VariablePattern v01 = new VariablePattern("globalId_IfcRoot");
+            // buildin PropertyPath { ?element ifc:globalId_IfcRoot / expr:hasString ?ifcgloballyuniqueid }
+            // globalId_IfcRoot is required
+            PropertyPathPattern TP1 = new PropertyPathPattern(element, globalId_IfcRoot, v01);
+            Console.WriteLine(TP1.ToString());
+            Console.WriteLine(TP1);
+            patternlist.Add(TP1);
+            ISparqlAlgebra select01 = new Bgp(patternlist);
+
+
+            // building PropertyPath: ifc:name_IfcRoot / expr:hasString
+            // Prädikat:
+            SequencePath name_IfcRoot = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:name_IfcRoot")),
+                new Property
+                (temp.CreateUriNode("expr:hasString"))
+                );
+            // Objekt ?globalId_IfcRoot
+            VariablePattern v02 = new VariablePattern("name_IfcRoot");
+            PropertyPathPattern TP2 = new PropertyPathPattern(element, name_IfcRoot, v02);
+            LeftJoin select02 = new LeftJoin(select01, new Bgp(TP2));
+
+
+            // building PropertyPath: ifc:description_IfcRoot / expr:hasString
+            SequencePath description_IfcRoot = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:description_IfcRoot")),
+                new Property
+                (temp.CreateUriNode("expr:hasString"))
+                );
+            VariablePattern v03 = new VariablePattern("description_IfcRoot");
+            PropertyPathPattern TP3 = new PropertyPathPattern(element, description_IfcRoot, v03);
+            LeftJoin select03 = new LeftJoin(select02, new Bgp(TP3));
+
+            // building PropertyPath: ifc:ifcOwnerHistory_ifcRoot should not be necessary with XBim
+            return select03;
+
+        }
+
+        public static ISparqlAlgebra Buildifcproduct()
+        {
+            ISparqlAlgebra ifcRoot = Buildppifcroot();
+            
+            SetpathXYZ();
+
+            // building PropertyPath: ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+            // ifc: location_IfcPlacement / ifc:coordinates_IfcCartesianPoint /
+            // list:hasContents / expr:hasDouble
+            // Prädikat:
+            SequencePath objectPlacement_IfcProduct_locationX = new SequencePath(
+                new Property(temp.CreateUriNode("ifc:objectPlacement_IfcProduct")),
+                new SequencePath(
+                    new Property(temp.CreateUriNode("ifc:relativePlacement_IfcLocalPlacement")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("ifc:location_IfcPlacement")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("ifc:coordinates_IfcCartesianPoint")),
+                            setpathX
+                            )
+                        )
+                    )
+                );
+            VariablePattern coordlocationX = new VariablePattern("coordinates_IfcCartesianPoint_X");
+            PropertyPathPattern LocationX = new PropertyPathPattern(element, objectPlacement_IfcProduct_locationX, coordlocationX);
+            LeftJoin select01 = new LeftJoin(ifcRoot, new Bgp(LocationX));
+
+
+            // building PropertyPath: ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+            // ifc:location_IfcPlacement / ifc:coordinates_IfcCartesianPoint /
+            // list:hasNext/ list:hasContents / expr:hasDouble
+            // Prädikat:
+            SequencePath objectPlacement_IfcProduct_locationY = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:objectPlacement_IfcProduct")),
+                new SequencePath(
+                    new Property(temp.CreateUriNode("ifc:relativePlacement_IfcLocalPlacement")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("ifc:location_IfcPlacement")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("ifc:coordinates_IfcCartesianPoint")),
+                            setpathY
+                            )
+                        )
+                    )
+                );
+            VariablePattern coordlocationY = new VariablePattern("coordinates_IfcCartesianPoint_Y");
+            PropertyPathPattern LocationY = new PropertyPathPattern(element, objectPlacement_IfcProduct_locationY, coordlocationY);
+            LeftJoin select02 = new LeftJoin(select01, new Bgp(LocationY));
+
+            // building PropertyPath: ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+            // ifc:location_IfcPlacement / ifc:coordinates_IfcCartesianPoint /
+            // list:hasNext/ list:hasContents / expr:hasDouble
+            // Prädikat:
+            SequencePath objectPlacement_IfcProduct_locationZ = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:objectPlacement_IfcProduct")),
+                new SequencePath(
+                    new Property(temp.CreateUriNode("ifc:relativePlacement_IfcLocalPlacement")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("ifc:location_IfcPlacement")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("ifc:coordinates_IfcCartesianPoint")),
+                            setpathZ
+                            )
+                        )
+                    )
+                );
+            VariablePattern coordlocationZ = new VariablePattern("coordinates_IfcCartesianPoint_Z");
+            PropertyPathPattern LocationZ = new PropertyPathPattern(element, objectPlacement_IfcProduct_locationZ, coordlocationZ);
+            LeftJoin select03 = new LeftJoin(select02, new Bgp(LocationZ));
+
+
+            // building PropertyPath: ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+            // ifc:refDirection_IfcAxis2Placement3D / ifc:directionRatios_IfcDirection /
+            // list:hasContents / expr:hasDouble
+            // ?refDirection_IfcAxis2Placement3D_X
+            // Prädikat:
+            SequencePath objectPlacement_relativePlacementX = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:objectPlacement_IfcProduct")),
+                new SequencePath(
+                    new Property(temp.CreateUriNode("ifc:relativePlacement_IfcLocalPlacement")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("ifc:refDirection_IfcAxis2Placement3D")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("ifc:directionRatios_IfcDirection")),
+                            setpathX
+                            )
+                        )
+                    )
+                );
+            VariablePattern relativePlacementX = new VariablePattern("refDirection_IfcAxis2Placement3D_X");
+            PropertyPathPattern relativePlacement_X = new PropertyPathPattern(element, objectPlacement_relativePlacementX, relativePlacementX);
+            LeftJoin select04 = new LeftJoin(select03, new Bgp(relativePlacement_X));
+
+            // building PropertyPath: ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+            // ifc:refDirection_IfcAxis2Placement3D / ifc:directionRatios_IfcDirection /
+            // list:hasNext list:hasContents / expr:hasDouble
+            // ?refDirection_IfcAxis2Placement3D_Y
+            // Prädikat:
+            SequencePath objectPlacement_relativePlacementY = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:objectPlacement_IfcProduct")),
+                new SequencePath(
+                    new Property(temp.CreateUriNode("ifc:relativePlacement_IfcLocalPlacement")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("ifc:refDirection_IfcAxis2Placement3D")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("ifc:directionRatios_IfcDirection")),
+                            setpathY
+                            )
+                        )
+                    )
+                );
+            VariablePattern relativePlacementY = new VariablePattern("refDirection_IfcAxis2Placement3D_Y");
+            PropertyPathPattern relativePlacement_Y = new PropertyPathPattern(element, objectPlacement_relativePlacementY, relativePlacementY);
+            LeftJoin select05 = new LeftJoin(select04, new Bgp(relativePlacement_Y));
+
+            // building PropertyPath: ifc:objectPlacement_IfcProduct / ifc:relativePlacement_IfcLocalPlacement /
+            // ifc:refDirection_IfcAxis2Placement3D / ifc:directionRatios_IfcDirection /
+            // list:hasNext / list:hasNext / list:hasContents / expr:hasDouble
+            // ?refDirection_IfcAxis2Placement3D_Z
+            // Prädikat:
+            SequencePath objectPlacement_relativePlacementZ = new SequencePath
+                (new Property
+                (temp.CreateUriNode("ifc:objectPlacement_IfcProduct")),
+                new SequencePath(
+                    new Property(temp.CreateUriNode("ifc:relativePlacement_IfcLocalPlacement")),
+                    new SequencePath(
+                        new Property(temp.CreateUriNode("ifc:refDirection_IfcAxis2Placement3D")),
+                        new SequencePath(
+                            new Property(temp.CreateUriNode("ifc:directionRatios_IfcDirection")),
+                            setpathZ
+                            )
+                        )
+                    )
+                );
+            VariablePattern relativePlacementZ = new VariablePattern("refDirection_IfcAxis2Placement3D_Z");
+            PropertyPathPattern relativePlacement_Z = new PropertyPathPattern(element, objectPlacement_relativePlacementZ, relativePlacementZ);
+            LeftJoin select06 = new LeftJoin(select05, new Bgp(relativePlacement_Z));
+
+            Console.WriteLine(select06.ToQuery().ToString());
+            return select06;
+        }
+
+        //--------------------------------V0.1-END--------------------------------
+
+
+        public static SparqlQuery querieobject(string ifcclass)
+        {
+            temp.NamespaceMap.Import(SetNamespaces());
+
+            VariablePattern element = new VariablePattern("element");
+            VariablePattern attribute = new VariablePattern("attribute");
+            VariablePattern value = new VariablePattern("value");
+            VariablePattern start = new VariablePattern("start");
+
+
+            SparqlVariable[] SVlist = new SparqlVariable[]{
+                new SparqlVariable(element.VariableName),
+                new SparqlVariable(attribute.VariableName),
+                new SparqlVariable(value.VariableName)
+                };
+
+            VariablePattern a1 = new VariablePattern("a1");
+            VariablePattern a2 = new VariablePattern("a2");
+            VariablePattern a3 = new VariablePattern("a3");
+            VariablePattern a4 = new VariablePattern("a4");
+            VariablePattern a5 = new VariablePattern("a5");
+            VariablePattern b1 = new VariablePattern("b1");
+
+            UriNode type = (UriNode)temp.CreateUriNode("rdf:type");
+            UriNode subClassOf = (UriNode)temp.CreateUriNode("rdfs:subClassOf");
+            UriNode ifcclassnode = (UriNode)temp.CreateUriNode("ifc:" + ifcclass);
+
+
+            SparqlQuery sq =
+                QueryBuilder
+                .Select(SVlist)
+                .Distinct()
+                .Where(
+                    new PropertyPathPattern(
+                        // Subject:
+                        element,
+                        // Predicate: rdf:type / rdfs:subClassOf*
+                        new SequencePath(
+                            new Property(type),
+                            new ZeroOrMore(
+                                new Property(subClassOf))
+                            ),
+                        // Object:
+                        new NodeMatchPattern(ifcclassnode)
+                        ),
+                    new TriplePattern(
+                        element,
+                        attribute,
+                        a1
+                        ),
+                    new TriplePattern(
+                        a1,
+                        a2,
+                        a3
+                        )
+                    //,
+                    //new PropertyPathPattern(
+                    //    start,
+                    //    new ZeroOrMore(
+                    //        new AlternativePath(
+                    //            new ZeroOrMore( new Property(temp.CreateUriNode("ifcext:ContainsElements"))),
+                    //            new ZeroOrMore(new Property(temp.CreateUriNode("ifcext:IsDecomposedBy"))))),
+                    //    element
+                    //    )
+                    )
+                .Filter(new NotInFunction(new ConstantTerm(type), new List<VariableTerm>() { new VariableTerm(attribute.VariableName), new VariableTerm(a2.VariableName) }))
+                // Test:
+                //.Filter(builder => builder.Variable(attribute.VariableName) != new IriExpression(new Uri("https://testontology.org/HasOpenings")))
+                .Where(new TriplePattern(a1, new NodeMatchPattern(type), a4))                
+                //.Bind(
+                //    b => new RdfTermExpression((ISparqlExpression)new IfElseFunction(
+                //    new IsLiteralFunction(
+                //        new VariableTerm(value.VariableName)),
+                //    new ConcatFunction( new List<ISparqlExpression>()
+                //        { new StrAfterFunction(
+                //            new StrFunction(new VariableTerm(a1.VariableName)),
+                //            b.Constant("#").Expression),
+                //        b.Constant(" | ").Expression,
+                //        new StrAfterFunction(
+                //            new StrFunction(new VariableTerm(a5.VariableName)),
+                //            b.Constant("#").Expression)
+                //        }),
+                //    new StrAfterFunction(
+                //            new StrFunction(new VariableTerm(a1.VariableName)),
+                //            b.Constant("#").Expression)
+                //    )
+                //))
+                //.As(attribute.VariableName)
+                .Bind(b => b.If(b.IsLiteral(b.Variable(a3.VariableName))).Then(b.StrDt(b.Str(b.Variable(a3.VariableName)),b.Variable(a4.VariableName))).Else(b.Variable(a1.VariableName)))
+                .As(value.VariableName)
+                .BuildQuery();
+            
+
+            // set FROM <http://www.ontotext.com/explicit>
+
+            //NotInFunction notInFunction = new NotInFunction(type, new IEnumerable<VariableTerm>(new VariableTerm(attribute.VariableName), new VariableTerm(a2.VariableName)));
+            sq.AddDefaultGraph(new Uri("http://www.ontotext.com/explicit"));
+
+            Console.Write(sq.ToString());
+
+            #region oldsparqlqueriebuidler
+            /*
+             ?element rdf:type / rdfs:subClassOf* ifcclass.
+            PropertyPathPattern pathPattern = new PropertyPathPattern(
+                // Subject:
+                element,
+                // Predicate: rdf:type / rdfs:subClassOf*
+                new SequencePath(
+                typeproperty,
+                new ZeroOrMore(
+                    new Property(temp.CreateUriNode("rdfs:subClassOf")))
+                ),
+                // Object:
+                new NodeMatchPattern(temp.CreateUriNode("ifc:" + ifcclass))
+                );
+            // ?element ?attribute ?a1
+            TriplePattern pattern02 = new TriplePattern(
+                element,
+                attribute,
+                a1
+                );
+            // ?attribute rdf:type owl:FunctionalProperty
+            TriplePattern pattern03 = new TriplePattern(
+                attribute,
+                type,
+                new NodeMatchPattern(temp.CreateUriNode("owl:FunctionalProperty"))
+                );
+
+            // ?a1 ?a2 ?value
+            TriplePattern pattern04 = new TriplePattern(
+                a1,
+                a2,
+                value
+                );
+
+            //Console.Write(notEquals.ToString());
+
+            
+            List<ITriplePattern> standardpatternlist = new List<ITriplePattern>() 
+                {
+                    pathPattern,    // ?element rdf:type / rdfs:subClassOf* ifc:...
+                    pattern02,      // ?element ?attribute ?a1
+                    //pattern03,      // ?attribute rdf:type owl:FunctionalProperty
+                    pattern04       // ?a1 ?a2 ?value                
+                };
+
+                ISparqlAlgebra standardsparqlpattern = new Bgp(standardpatternlist);
+
+                //  FILTER( ?a2 != rdf:type )
+                //  - schließt die Ausgabe des Attributtyps aus; Key ist in ?attribute
+                NotEqualsExpression notEquals = new NotEqualsExpression(
+                    new VariableTerm(a2.VariableName),
+                    new ConstantTerm(type.Node)
+                    );
+
+                Filter filter = new Filter(
+                    standardsparqlpattern,
+                    new UnaryExpressionFilter(notEquals)
+                    );
+
+                //Select select = new Select(
+                //    filter,
+                //    true,
+                //    SVlist
+                //    );
+
+                Minus notexists = new Minus(
+                    filter,
+                    new Bgp(endregion
+                        new PropertyPathPattern(
+                            attribute,
+                            new SequencePath(
+                                new Property(temp.CreateUriNode("rdfs:subPropertyOf")),
+                                new ZeroOrMore(
+                                    new Property(temp.CreateUriNode("rdfs:subClassOf")))
+                                ),
+                            new NodeMatchPattern(temp.CreateUriNode("ifc:IfcRelationship"))
+                            )
+                        )
+                    );
+
+                SparqlParameterizedString SPS = new SparqlParameterizedString
+                {
+                    Namespaces = SetNamespaces(),
+                    CommandText = "SELECT ?element ?attribute ?value FROM onto:explicit WHERE " + notexists.ToQuery().ToString()
+                };
+
+
+                SparqlQueryParser parser = new SparqlQueryParser();
+                SparqlQuery SQ = parser.ParseFromString(SPS);*/
+            #endregion
+
+
+            return sq;
+            
+
+        }
+
+        public static SparqlQuery relationshipquerie(string ifcclass)
+        {
+            SparqlParameterizedString standardquerie = new SparqlParameterizedString() { Namespaces = SetNamespaces() };
+
+            VariablePattern element = new VariablePattern("element");
+            VariablePattern attribute = new VariablePattern("attribute");
+            VariablePattern value = new VariablePattern("value");
+
+
+            IEnumerable<SparqlVariable> SVlist = new List<SparqlVariable>() {
+                new SparqlVariable(element.VariableName),
+                new SparqlVariable(attribute.VariableName),
+                new SparqlVariable(value.VariableName)
+                };
+
+            NodeMatchPattern type = new NodeMatchPattern(temp.CreateUriNode("rdf:type"));
+            Property typeproperty = new Property(temp.CreateUriNode("rdf:type"));
+
+
+            VariablePattern a1 = new VariablePattern("a1");
+            VariablePattern a2 = new VariablePattern("a2");
+
+            temp.NamespaceMap.Import(SetNamespaces());
+
+            /* e 
+             * ?element rdf:type / rdfs:subClassOf* ifc:Context. */
+            PropertyPathPattern pathPattern = new PropertyPathPattern(
+                // Subject:
+                element,
+                // Predicate: rdf:type / rdfs:subClassOf*
+                new SequencePath(
+                typeproperty,
+                new ZeroOrMore(
+                    new Property(temp.CreateUriNode("rdfs:subClassOf")))
+                ),
+                // Object:
+                new NodeMatchPattern(temp.CreateUriNode("ifc:" + ifcclass))
+                );
+
+            // ?element ?attribute ?a1
+            TriplePattern pattern02 = new TriplePattern(
+                element,
+                attribute,
+                value
+                );
+
+            // ?attribute rdfs:subPropertyOf / rdfs:subClassOf* ifc:IfcRelationship .
+            PropertyPathPattern pattern03 = new PropertyPathPattern(
+                attribute,
+                new SequencePath(
+                new Property(temp.CreateUriNode("rdfs:subPropertyOf")),
+                new ZeroOrMore(
+                    new Property(temp.CreateUriNode("rdfs:subClassOf")))
+                ),
+                new NodeMatchPattern(temp.CreateUriNode("ifc:IfcRelationship"))
+                );
+
+            //Console.Write(notEquals.ToString());
+
+            List<ITriplePattern> standardpatternlist = new List<ITriplePattern>()
+            {
+                pathPattern,    // ?element rdf:type / rdfs:subClassOf* ifc:...
+                pattern02,      // ?element ?attribute ?a1
+                pattern03,      // ?attribute rdfs:subPropertyOf / rdfs:subClassOf* ifc:IfcRelationship .
+            };
+
+            ISparqlAlgebra standardsparqlpattern = new Bgp(standardpatternlist);
+
+
+            SparqlParameterizedString SPS = new SparqlParameterizedString();
+            SPS.Namespaces = SetNamespaces();
+            SPS.CommandText = "SELECT ?element ?attribute ?value FROM onto:explicit WHERE " + standardsparqlpattern.ToQuery().ToString();
+
+
+            SparqlQueryParser parser = new SparqlQueryParser();
+            SparqlQuery SQ = parser.ParseFromString(SPS);
+            //Console.Write(SQ.ToString());
+            return SQ;
+
+
+        }
+
+        public static SparqlResultSet abfrage(SparqlQuery SQ)
+        {
+            SRE.ResultsAcceptHeader = "application/sparql-results+json";
+            SparqlResultSet SRS = SRE.QueryWithResultSet(SQ.ToString());
+            return SRS;
+
+        }
+
+
+        public static SparqlQuery Buildquery(ISparqlAlgebra SA)
+        {
+            SparqlParameterizedString sp = new SparqlParameterizedString() 
+            {
+                CommandText = $"SELECT * FROM onto:explicit WHERE " + SA.ToQuery(),
+                Namespaces = SetNamespaces()
+            };
+            
+            SparqlQueryParser parser = new SparqlQueryParser();
+
+            Console.WriteLine(sp.ToString());
+
+            SparqlQuery SQ = parser.ParseFromString(sp);
+
+            return SQ;
+        }
+
+        
+    }
+
+
+}

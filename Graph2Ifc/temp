@@ -1,0 +1,62 @@
+                    var site = model.Instances.New<IfcSite>(s =>
+                        {
+                            s.Description = "DESCRIPTION";
+                            s.ObjectPlacement = model.Instances.New<IfcLocalPlacement>(l =>
+                            {
+                                l.RelativePlacement = model.Instances.New<IfcAxis2Placement3D>(a =>
+                                {
+                                    a.Axis = model.Instances.New<IfcDirection>(d =>
+                                    {
+                                        //inst:IfcDirection_110 ifc:directionRatios_IfcDirection / list:hasNext* / list:hasContents / expr:hasDouble ?Value
+                                        d.SetXYZ(0, 0, 1); // if (?Value.Count() = 3)
+                                        d.SetXY(0, 0); // if (?Value.Count() = 2)
+                                    });
+                                    a.Location = model.Instances.New<IfcCartesianPoint>(c =>
+                                    {
+                                        c.SetXYZ(0, 0, 0);
+                                    });
+                                });
+                            });
+                        });
+                        
+                    //create simple object and use lambda initializer to set the name
+                    var wall = model.Instances.New<IfcWall>(w => w.Name = "The very first wall");
+
+
+                    model.Instances.New<IfcRelContainedInSpatialStructure>(x =>
+                    {
+                        x.Name = "Test";
+                        x.RelatedElements.Add(wall);
+                        x.RelatingStructure = site;
+                    });
+                    
+                    
+        public static IfcWall generateWall(IfcStore model)
+        {
+
+            var wall = model.Instances.New<IfcWall>(w => 
+            {
+                w.Name = "The very first wall";
+                w.GlobalId = "xx";
+            });
+
+            return wall;
+        }
+        
+PREFIX ifc: <https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD1/OWL#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX expr: <https://w3id.org/express#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT
+?path01 ?path02 (COUNT(?mid) as ?distance)
+WHERE {
+    ?path01 rdfs:domain ifc:IfcRoot .
+    #?path01 rdfs:range ?mid01 .
+    ?path01 (rdfs:range / ((rdfs:subClassOf / ^(rdfs:domain / owl:unionOf / rdf:rest* / rdf:first)) | ^rdfs:domain))+ ?path02 .
+    #?mid (rdfs:range / ((rdfs:subClassOf / ^(rdfs:domain / owl:unionOf / rdf:rest* / rdf:first)) | ^rdfs:domain))+ ?path02 .
+    #FILTER NOT EXISTS {?path01 owl:inverseOf ?path02 .}
+    #?path02 rdfs:range ?mid02 .
+}
+GROUP BY ?path01 ?path02
+ORDER BY ?path01 ?path02

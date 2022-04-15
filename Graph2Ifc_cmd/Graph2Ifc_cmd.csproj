@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <StartupObject>Graph2Ifc_cmd.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Graph2Ifc\Graph2Ifc_v1.csproj" />
+    <ProjectReference Include="..\GraphIfcGeoRefChecker\GraphIfcGeoRefChecker.csproj" />
+  </ItemGroup>
+
+</Project>

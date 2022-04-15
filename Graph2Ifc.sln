@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31424.327
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Graph2Ifc_v1", "Graph2Ifc\Graph2Ifc_v1.csproj", "{48DD6EE0-4FC2-413E-8840-CD13697BEFC5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GraphIfcGeoRefChecker", "GraphIfcGeoRefChecker\GraphIfcGeoRefChecker.csproj", "{900B8D60-C634-42C0-A11A-55D1F71BAA08}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Graph2Ifc_cmd", "Graph2Ifc_cmd\Graph2Ifc_cmd.csproj", "{FD2A7009-9583-4A39-BADC-E5562CDFCB04}"
+	ProjectSection(ProjectDependencies) = postProject
+		{900B8D60-C634-42C0-A11A-55D1F71BAA08} = {900B8D60-C634-42C0-A11A-55D1F71BAA08}
+		{48DD6EE0-4FC2-413E-8840-CD13697BEFC5} = {48DD6EE0-4FC2-413E-8840-CD13697BEFC5}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48DD6EE0-4FC2-413E-8840-CD13697BEFC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48DD6EE0-4FC2-413E-8840-CD13697BEFC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48DD6EE0-4FC2-413E-8840-CD13697BEFC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48DD6EE0-4FC2-413E-8840-CD13697BEFC5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{900B8D60-C634-42C0-A11A-55D1F71BAA08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{900B8D60-C634-42C0-A11A-55D1F71BAA08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{900B8D60-C634-42C0-A11A-55D1F71BAA08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{900B8D60-C634-42C0-A11A-55D1F71BAA08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD2A7009-9583-4A39-BADC-E5562CDFCB04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD2A7009-9583-4A39-BADC-E5562CDFCB04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD2A7009-9583-4A39-BADC-E5562CDFCB04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD2A7009-9583-4A39-BADC-E5562CDFCB04}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9D72D1C7-D60E-4BB0-8635-4FBFF272B56A}
+	EndGlobalSection
+EndGlobal
