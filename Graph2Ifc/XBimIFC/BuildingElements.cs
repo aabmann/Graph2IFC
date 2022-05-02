@@ -24,6 +24,7 @@ using Graph2Ifc.SPARQLqueries;
 using Xbim.Ifc4.QuantityResource;
 using Xbim.Ifc4.TopologyResource;
 using VDS.RDF;
+using Xbim.Ifc4.GeometricModelResource;
 
 namespace Graph2Ifc.XBimIFC
 {
@@ -132,23 +133,59 @@ namespace Graph2Ifc.XBimIFC
 
                             // allLiteral is used to set the simple values like IfcLabel, IfcGloballyUniqueId
                             bool allLiteral = values.All(k => k.GetType() == typeof(LiteralNode));
+
+                            // momentan werden auch die Listen hier eingegeben
+                            // setzt die einfachen und definierten Attribute der IFC entitäten
+
                             if (allLiteral)
                             {
+                                if (typeof(IItemSet).IsAssignableFrom(prop.PropertyType))
+                                {
+                                    var zweidimensionaleliste = values.Select(v => v.Value.Split("),("));
+                                    if (zweidimensionaleliste.Count() > 1)
+                                    {
+                                        // hier werden zweidimensionaleliste behandelt
+                                    }
+                                    else
+                                    {
+                                        var eindimensionaleliste = values.Select(v => v.Value.Substring(1, v.Value.Length - 2).Split(",")).First();
+                                        var eindimensionalelisteuri = eindimensionaleliste[0];
+                                        if (rtype.IsSubclassOf(typeof(PersistEntity)))
+                                        {
+                                            foreach (var item in eindimensionaleliste)
+                                            {
+                                                prop.GetValue(ifcentity).Add(persistentitylist[item.ToString().Trim()]);
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            // hier werden eindimensionaleliste von Datentypen behandelt (IfcCartesianPoint)
+                                        }
+
+                                    }
+                                }
+                                // Enumerationsdatentyp
+
                                 if (rtype.IsEnum)
                                 {
                                     prop.SetValue(ifcentity, Enum.Parse(rtype, attributeandvalues[attribute].FirstOrDefault().Value));
                                 }
-                                else if (rtype.IsSubclassOf(typeof(ValueType)) && rtype != typeof(double) /*temporaer zum testen:*/&& rtype.Name != "IfcCompoundPlaneAngleMeasure")
+                                else if (rtype.IsSubclassOf(typeof(ValueType)) && rtype != typeof(double) && rtype != typeof(Int64) && !typeof(IItemSet).IsAssignableFrom(prop.PropertyType)/*temporaer zum testen:*/&& rtype.Name != "IfcCompoundPlaneAngleMeasure")
                                 {
                                     var n = Activator.CreateInstance(rtype, attributeandvalues[attribute].FirstOrDefault().Value);
 
                                     prop.SetValue(ifcentity, n);
                                 }
-                                else if (rtype == typeof(double))
+                                else if (rtype == typeof(double) && !typeof(IItemSet).IsAssignableFrom(prop.PropertyType))
                                 {
                                     prop.SetValue(ifcentity, Double.Parse(attributeandvalues[attribute].FirstOrDefault().Value, provider));
                                 }
-                                else if (rtype == typeof(IfcValue))
+                                else if (rtype == typeof(Int64) && !typeof(IItemSet).IsAssignableFrom(prop.PropertyType))
+                                {
+                                    prop.SetValue(ifcentity, Int64.Parse(attributeandvalues[attribute].FirstOrDefault().Value, provider));
+                                }
+                                else if (rtype == typeof(IfcValue) && !typeof(IItemSet).IsAssignableFrom(prop.PropertyType))
                                 {
                                     //string valuetypestring = key.Substring(key.IndexOf("|") + 2);
                                     Uri valuetypeuri = attributeandvalues[attribute].FirstOrDefault().DataType;
@@ -164,6 +201,9 @@ namespace Graph2Ifc.XBimIFC
                                 }
 
                             }
+
+                            // setzt die Verknüfungen zu anderen Entitäten
+                            // keine Listen von Entitäten!
 
                             if (allUri)
                             {

@@ -2,7 +2,7 @@
   "profiles": {
     "Graph2Ifc_cmd": {
       "commandName": "Project",
-      "commandLineArgs": "\"http://localhost:7200/repositories/MS_5\" \"A:/HTW Dresden/Master/Masterarbeit/01_Projekt/03_Graph2IFC/ausgabe.ifc\""
+      "commandLineArgs": "\"http://localhost:7200/repositories/AC20-FZK-Haus_clean\" \"A:/AC20-FZK-Haus_ausgabe.ifc\""
     }
   }
 }

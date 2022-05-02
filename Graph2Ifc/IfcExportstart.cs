@@ -31,6 +31,7 @@ namespace Graph2Ifc
         {
             Assembly assembly = Assembly.Load("Xbim.Ifc4");
             IEnumerable<string> subtypesPersistEntity = assembly.GetTypes().Where(t => t.BaseType == typeof(PersistEntity)).Select(t => t.Name);
+            int x = subtypesPersistEntity.Count();
             IEnumerable<Type> selecttypes = assembly.GetTypes().Where(t => typeof(IExpressSelectType).IsAssignableFrom(t) & t.IsAbstract == true & !t.IsSubclassOf(typeof(PersistEntity)));
             await File.WriteAllLinesAsync("../../Ifc4Entities.txt", subtypesPersistEntity);
         }
@@ -62,12 +63,15 @@ namespace Graph2Ifc
                 throw new Exception("Error");
             }
 
-
             if (ifcversion.Contains("IFC4"))
             {
                 BuildingElements.fileName = output;
 
-                SparqlQuery SQdefinitionselect = Queriebuilder.queriemaingraph("IfcDefinitionSelect");
+                SparqlQuery SQifcentities = Queriebuilder.queriemaingraph("IfcEntities");
+                SparqlResultSet SRSifcentities = Queriebuilder.abfrage(SQifcentities);
+                Dictionary<string, Dictionary<string, List<dynamic>>> resultsifcentities = sortresults(SRSifcentities);
+
+                /*SparqlQuery SQdefinitionselect = Queriebuilder.queriemaingraph("IfcDefinitionSelect");
                 SparqlResultSet SRSdefinitionselect = Queriebuilder.abfrage(SQdefinitionselect);
                 Dictionary<string, Dictionary<string, List<dynamic>>> resultsdefinitionselect = sortresults(SRSdefinitionselect);
 
@@ -140,11 +144,10 @@ namespace Graph2Ifc
                 resultsifcrelationship.Clear();
                 resultsproperty.Clear();
                 resultslayereditem.Clear();
-                resultsproductrepresentationselect.Clear();
+                resultsproductrepresentationselect.Clear();*/
 
                 var model = IfcStore.Create(/*editor,*/ XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-                Dictionary<string, dynamic> ifcentities = new Dictionary<string, dynamic>();
-                BuildingElements.GenerateIfcProject(model, allresults);
+                BuildingElements.GenerateIfcProject(model, resultsifcentities);
             }
 
             else if (ifcversion.Contains("IFC2X3"))
@@ -152,7 +155,7 @@ namespace Graph2Ifc
 
                 BuildingElements_Ifc2x3.fileName = output;
 
-                SparqlQuery SQroot = Queriebuilder.queriemaingraph("IfcRoot");
+                SparqlQuery SQroot = Queriebuilder.queriemaingraph("IfcEntities");
                 SparqlResultSet SRSroot = Queriebuilder.abfrage(SQroot);
                 Dictionary<string, Dictionary<string, List<dynamic>>> resultsroot = sortresults(SRSroot);
 

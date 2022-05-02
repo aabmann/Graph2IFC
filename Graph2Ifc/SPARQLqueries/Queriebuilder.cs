@@ -193,14 +193,16 @@ namespace Graph2Ifc.SPARQLqueries
             //NotInFunction notInFunction = new NotInFunction(type, new IEnumerable<VariableTerm>(new VariableTerm(attribute.VariableName), new VariableTerm(a2.VariableName)));
             listquerie.AddDefaultGraph(new Uri("http://www.ontotext.com/explicit"));
 
+            string querie = IfcDatatypesUnionQuerie.gesamtabfrage("ifcext:"+ifcclass);
 
+            /*
             string querie =
             " SELECT ?element ?attribute ?value FROM onto:explicit" +
             " WHERE {" +
             "   {" +
             "       SELECT DISTINCT ?element ?attribute ?c1" +
             "       WHERE { " +
-            "           ?element rdf:type / rdfs:subClassOf* ifc:"+ifcclass+" ."+
+            "           ?element rdf:type / rdfs:subClassOf* ifcext:"+ifcclass+" ."+
             "           ?element ?attribute ?a1 ." +
             "           ?a1 ?a2 ?a3 ." +
             "           ?a1 rdf:type ?a4 ." +
@@ -216,7 +218,7 @@ namespace Graph2Ifc.SPARQLqueries
             "   ?c1 list:hasNext* / list:hasContents ?d1 ." +
             "   }" +
             "   BIND(IF(BOUND(?d1), ?d1, ?c1) AS ?value)" +
-            "}";
+            "}";*/
             SparqlParameterizedString SPS = new SparqlParameterizedString
             {
                 Namespaces = NM,
@@ -434,6 +436,57 @@ namespace Graph2Ifc.SPARQLqueries
             Console.WriteLine(IfcVersionQuery.ToString());
 
             return IfcVersionQuery;
+        }
+
+        public static SparqlQuery queriewindows(string ifcclass)
+        {
+
+            temp.NamespaceMap.Import(NM);
+
+            string querie =
+            " SELECT ?element ?attribute ?value FROM onto:explicit" +
+            " WHERE {" +
+            "   {" +
+            "       SELECT DISTINCT ?element ?attribute ?c1" +
+            "       WHERE { " +
+            "           {SELECT ?element WHERE {" +
+            "                   ?start rdf:type / rdfs:subClassOf* ifc:IfcWindow ." +
+            "                   ?start (rdf:type|!rdf:type)* ?element." +
+            "                   ?element rdf:type / rdfs:subClassOf* ifcext:IfcEntities.}" +
+            "           }" +
+            //"           ?element rdf:type / rdfs:subClassOf* ifc:"+ifcclass+" ."+
+            "           ?element ?attribute ?a1 ." +
+            "           ?a1 ?a2 ?a3 ." +
+            "           ?a1 rdf:type ?a4 ." +
+            //"           #?attribute rdfs:range ?e1 ." +
+            //"           #?a4 rdfs:subClassOf* ?e1 ." +
+            "           BIND(IF(ISLITERAL(?a3), STRDT(STR(?a3), ?a4), ?a1) AS ?c1)" +
+            "           FILTER(rdf:type NOT IN(?attribute, ?a2))" +
+            "       }" +
+            "   }" +
+            "   OPTIONAL {" +
+            "   ?c1 rdf:type / rdfs:subClassOf* list:OWLList." +
+            "   FILTER NOT EXISTS {?c1 rdf:type / rdfs:subClassOf* ifc:IfcValue}" +
+            "   ?c1 list:hasNext* / list:hasContents ?d1 ." +
+            "   }" +
+            "   BIND(IF(BOUND(?d1), ?d1, ?c1) AS ?value)" +
+            "}";
+            SparqlParameterizedString SPS = new SparqlParameterizedString
+            {
+                Namespaces = NM,
+                CommandText = querie,
+            };
+            //SparqlOptimiser.QueryOptimiser = optimiser;
+
+            Options.QueryOptimisation = false;
+
+            SparqlQueryParser parser = new SparqlQueryParser();
+            SparqlQuery SQ = parser.ParseFromString(SPS);
+            
+
+            Console.Write(SQ.ToString());
+
+            return SQ;
         }
 
         public static SparqlResultSet abfrage(SparqlQuery SQ)
