@@ -1,0 +1,39 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX list: <https://w3id.org/list#>
+PREFIX ifcext: <http://www.semanticweb.org/aaron/ontologies/2022/1/ifcextension#>
+INSERT {
+    ?element ifcext:X_IfcDirection ?listx .
+    ifcext:X_IfcDirection rdf:type owl:ObjectProperty ;
+                          rdfs:domain ifc:IfcDirection ;
+                          rdfs:range ifc:IfcReal  ;
+                          rdfs:label "X" .
+
+    ?element ifcext:Y_IfcDirection ?listy .
+    ifcext:Y_IfcDirection rdf:type owl:ObjectProperty ;
+                          rdfs:domain ifc:IfcDirection ;
+                          rdfs:range ifc:IfcReal  ;
+                          rdfs:label "Y" .
+
+    ?element ifcext:Z_IfcDirection ?listz .
+    ifcext:Z_IfcDirection rdf:type owl:ObjectProperty ;
+                          rdfs:domain ifc:IfcDirection ;
+                          rdfs:range ifc:IfcReal  ;
+                          rdfs:label "Z" .
+} 
+WHERE {
+    ?element rdf:type / rdfs:subClassOf* ifc:IfcDirection .
+
+#X_IfcDirection
+    ?element ifc:directionRatios_IfcDirection / list:hasContents ?listx .
+
+#Y_IfcDirection
+    ?element ifc:directionRatios_IfcDirection / list:hasNext / list:hasContents ?listy .
+
+#Z_IfcDirection
+	OPTIONAL {
+		?element ifc:directionRatios_IfcDirection /
+			list:hasNext / list:hasNext / list:hasContents ?listz .    
+    }
+}

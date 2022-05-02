@@ -1,0 +1,70 @@
+PREFIX ifcext: <http://www.semanticweb.org/aaron/ontologies/2022/1/ifcextension#>
+
+INSERT{
+    ifcext:IfcEntities rdfs:subClassOf expr:SELECT ;
+                       rdf:type owl:Class .
+    ?value rdfs:subClassOf ifcext:IfcEntities .
+} WHERE {
+    VALUES ?value {
+    #IFC4_ADD2_TC1 Entities
+        ifc:IfcApplication
+        ifc:IfcOwnerHistory
+        ifc:IfcTable
+        ifc:IfcTableColumn
+        ifc:IfcTableRow
+        ifc:IfcBoundaryCondition
+        ifc:IfcStructuralConnectionCondition
+        ifc:IfcStructuralLoad
+        ifc:IfcCoordinateOperation
+        ifc:IfcCoordinateReferenceSystem
+        ifc:IfcProductRepresentation
+        ifc:IfcRepresentation
+        ifc:IfcRepresentationContext
+        ifc:IfcShapeAspect
+        ifc:IfcPhysicalQuantity
+        ifc:IfcPropertyAbstraction
+        ifc:IfcProfileDef
+        ifc:IfcLightDistributionData
+        ifc:IfcLightIntensityDistribution
+        ifc:IfcPresentationLayerAssignment
+        ifc:IfcPresentationItem
+        ifc:IfcPresentationStyle
+        ifc:IfcPresentationStyleAssignment
+        ifc:IfcDerivedUnit
+        ifc:IfcDerivedUnitElement
+        ifc:IfcDimensionalExponents
+        ifc:IfcMeasureWithUnit
+        ifc:IfcMonetaryUnit
+        ifc:IfcNamedUnit
+        ifc:IfcUnitAssignment
+        ifc:IfcMaterialClassificationRelationship
+        ifc:IfcMaterialDefinition
+        ifc:IfcMaterialList
+        ifc:IfcMaterialUsageDefinition
+        ifc:IfcRoot
+        ifc:IfcRepresentationItem
+        ifc:IfcRepresentationMap
+        ifc:IfcConnectionGeometry
+        ifc:IfcGridAxis
+        ifc:IfcObjectPlacement
+        ifc:IfcVirtualGridIntersection
+        ifc:IfcExternalInformation
+        ifc:IfcExternalReference
+        ifc:IfcResourceLevelRelationship
+        ifc:IfcIrregularTimeSeriesValue
+        ifc:IfcRecurrencePattern
+        ifc:IfcSchedulingTime
+        ifc:IfcTimePeriod
+        ifc:IfcTimeSeries
+        ifc:IfcTimeSeriesValue
+        ifc:IfcAppliedValue
+        ifc:IfcConstraint
+        ifc:IfcReference
+        ifc:IfcApproval
+        ifc:IfcActorRole
+        ifc:IfcAddress
+        ifc:IfcOrganization
+        ifc:IfcPerson
+        ifc:IfcPersonAndOrganization
+    }
+}

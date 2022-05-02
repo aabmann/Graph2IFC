@@ -1,0 +1,39 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX list: <https://w3id.org/list#>
+PREFIX ifcext: <http://www.semanticweb.org/aaron/ontologies/2022/1/ifcextension#>
+INSERT {
+    ?element ifcext:X_IfcCartesianPoint ?listx .
+    ifcext:X_IfcCartesianPoint rdf:type owl:FunctionalProperty ;
+                               rdfs:domain ifc:IfcCartesianPoint ;
+                               rdfs:range ifc:IfcLengthMeasure  ;
+                               rdfs:label "X" .
+
+    ?element ifcext:Y_IfcCartesianPoint ?listy .
+    ifcext:Y_IfcCartesianPoint rdf:type owl:FunctionalProperty ;
+                               rdfs:domain ifc:IfcCartesianPoint ;
+                               rdfs:range ifc:IfcLengthMeasure  ;
+                               rdfs:label "Y" .
+
+    ?element ifcext:Z_IfcCartesianPoint ?listz .
+    ifcext:Z_IfcCartesianPoint rdf:type owl:FunctionalProperty ;
+                               rdfs:domain ifc:IfcCartesianPoint ;
+                               rdfs:range ifc:IfcLengthMeasure  ;
+                               rdfs:label "Z" .
+} 
+WHERE {
+    ?element rdf:type / rdfs:subClassOf* ifc:IfcCartesianPoint .
+
+#X_IfcCartesianPoint
+    ?element ifc:coordinates_IfcCartesianPoint / list:hasContents ?listx .
+
+#Y_IfcCartesianPoint  
+    ?element ifc:coordinates_IfcCartesianPoint / list:hasNext / list:hasContents ?listy .
+
+#Z_IfcCartesianPoint
+	OPTIONAL {
+		?element ifc:coordinates_IfcCartesianPoint /
+			list:hasNext / list:hasNext / list:hasContents ?listz .
+    }
+}
