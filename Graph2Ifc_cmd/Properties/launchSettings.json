@@ -2,7 +2,7 @@
   "profiles": {
     "Graph2Ifc_cmd": {
       "commandName": "Project",
-      "commandLineArgs": "\"http://localhost:7200/repositories/AC20-FZK-Haus_clean\" \"A:/AC20-FZK-Haus_ausgabe.ifc\""
+      "commandLineArgs": "\"http://localhost:7200/repositories/verwinkeltesHaus_clean\" \"A:/verwinkeltesHaus_ausgabe.ifc\""
     }
   }
 }

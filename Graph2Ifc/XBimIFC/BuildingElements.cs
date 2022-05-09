@@ -25,6 +25,7 @@ using Xbim.Ifc4.QuantityResource;
 using Xbim.Ifc4.TopologyResource;
 using VDS.RDF;
 using Xbim.Ifc4.GeometricModelResource;
+using Xbim.Common.Collections;
 
 namespace Graph2Ifc.XBimIFC
 {
@@ -141,15 +142,26 @@ namespace Graph2Ifc.XBimIFC
                             {
                                 if (typeof(IItemSet).IsAssignableFrom(prop.PropertyType))
                                 {
-                                    var zweidimensionaleliste = values.Select(v => v.Value.Split("),("));
-                                    if (zweidimensionaleliste.Count() > 1)
+                                    if ((typeof(IItemSet).IsAssignableFrom(rtype)))
                                     {
                                         // hier werden zweidimensionaleliste behandelt
+
+                                        var zweidimensionaleliste = values.Select(v => v.Value.Substring(1, v.Value.Length - 2).Split("),(")).First();
+                                        int zweiditemscount = 0;
+                                        foreach (var zweiditems in zweidimensionaleliste)
+                                        {
+                                            var eindimensionaleliste = zweiditems.Split(",");
+                                            foreach (var item in eindimensionaleliste)
+                                            {
+                                                prop.GetValue(ifcentity).GetAt(zweiditemscount).Add(Activator.CreateInstance(rtype.GenericTypeArguments[0], item));
+                                            }
+                                            zweiditemscount++;
+                                        }
+
                                     }
                                     else
                                     {
                                         var eindimensionaleliste = values.Select(v => v.Value.Substring(1, v.Value.Length - 2).Split(",")).First();
-                                        var eindimensionalelisteuri = eindimensionaleliste[0];
                                         if (rtype.IsSubclassOf(typeof(PersistEntity)))
                                         {
                                             foreach (var item in eindimensionaleliste)
@@ -161,6 +173,12 @@ namespace Graph2Ifc.XBimIFC
                                         else
                                         {
                                             // hier werden eindimensionaleliste von Datentypen behandelt (IfcCartesianPoint)
+
+                                            foreach (var item in eindimensionaleliste)
+                                            {
+                                                prop.GetValue(ifcentity).Add(Activator.CreateInstance(rtype,item));
+                                            }
+
                                         }
 
                                     }
@@ -348,7 +366,6 @@ namespace Graph2Ifc.XBimIFC
                 Console.WriteLine("An element with Key = " + ifcinstanz + " already exists");
             }
         }
-
 
     }
 }
