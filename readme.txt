@@ -7,12 +7,4 @@ Folgende SPARQL Construct befehle für die Abkürzungen müssen
 manuell ausgeführt werden (Die Befehle sind im SPARQL Ordner):
 	ifcext:IfcEntites 
 		IFC4 - Ifc4Entities.rq 
-		oder IFC2X3 - Ifc2x3Entities.rq 
-	Koordinaten für IfcCartesianPoint - IfcCartesianPoint.rq:	
-		ifcext:X_IfcCartesianPoint
-		ifcext:Y_IfcCartesianPoint
-		ifcext:Z_IfcCartesianPoint
-	für IfcDirection - IfcDirection.rq:
-		ifcext:X_IfcDirection
-		ifcext:Y_IfcDirection
-		ifcext:Z_IfcDirection
+		oder IFC2X3 - Ifc2x3Entities.rq
